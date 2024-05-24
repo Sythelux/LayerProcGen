@@ -1,7 +1,7 @@
 using Runevision.Common;
 using Runevision.LayerProcGen;
 using System.Collections.Generic;
-using UnityEngine;
+using Godot;
 
 public class PointsSpawningChunk : LayerChunk<PointsSpawningLayer, PointsSpawningChunk> {
 	
@@ -31,11 +31,14 @@ public class PointsSpawningChunk : LayerChunk<PointsSpawningLayer, PointsSpawnin
 			TransformWrapper currentChunkParent = chunkParent; // Capture current chunk parent.
 			foreach (Point point in points) {
 				Point currentPoint = point; // Capture current point in foreach loop.
-				MainThreadActionQueue.Enqueue(() => {
-					Transform tr = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
-					tr.position = new Vector3(currentPoint.x, 0f, currentPoint.y);
-					tr.localScale = Vector3.one * 50f;
-					currentChunkParent.AddChild(tr);
+				MainThreadActionQueue.Enqueue(() =>
+				{
+					var meshInstance3D = new MeshInstance3D();
+					meshInstance3D.Mesh = new SphereMesh();
+					Transform3D tr = meshInstance3D.Transform;
+					tr.Origin = new Vector3(currentPoint.x, 0f, currentPoint.y);
+					tr.ScaledLocal( Vector3.One * 50f);
+					currentChunkParent.AddChild(meshInstance3D);
 				});
 			}
 
@@ -51,11 +54,12 @@ public class PointsSpawningLayer : ChunkBasedDataLayer<PointsSpawningLayer, Poin
 	public override int chunkH { get { return 100; } }
 
 	// A Transform parent for all objects spawned by this layer.
-	public Transform layerParent;
+	public Node3D layerParent;
 
 	public PointsSpawningLayer() {
 		// Create the layer parent Transform. We're on the main thread, so it's ok.
-		layerParent = new GameObject("PointsSpawnLayer").transform;
+
+		layerParent = new Node3D { Name = "PointsSpawnLayer" };
 		
 		// Dependencies on other layers are set up here with appropriate padding.
 		AddLayerDependency(new LayerDependency(PointsLayer.instance, new Point(0, 0)));

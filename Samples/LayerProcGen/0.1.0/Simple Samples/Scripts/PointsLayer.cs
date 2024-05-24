@@ -1,6 +1,7 @@
 using Runevision.Common;
 using Runevision.LayerProcGen;
 using System.Collections.Generic;
+using Godot;
 
 public class PointsChunk : LayerChunk<PointsLayer, PointsChunk> {
 	// Data for this chunk goes here.
@@ -51,7 +52,7 @@ public class PointsLayer : ChunkBasedDataLayer<PointsLayer, PointsChunk> {
 		// Draw the points in all chunks.
 		HandleAllChunks(0, c => {
 			foreach (Point p in c.pointList)
-				DebugDrawer.DrawCross(p, 16f, UnityEngine.Color.green);
+				DebugDrawer.DrawCross(p, 16f, Colors.Green);
 		});
 	}
 
