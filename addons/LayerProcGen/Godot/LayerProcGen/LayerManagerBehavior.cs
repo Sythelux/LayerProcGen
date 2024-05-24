@@ -34,23 +34,26 @@ namespace Runevision.LayerProcGen {
         [Export]
 		public Label debugStatusText;
 
-        void Awake() {
+        public override void _EnterTree()
+        {
             manager = new LayerManager(useParallelThreads);
             instance = this;
         }
 
-        void OnDestroy() {
+        public override void _ExitTree()
+        {
             manager.OnDestroy();
         }
 
-        protected virtual void Update() {
+        public override void _Process(double delta)
+        {
             MainThreadActionQueue.ProcessQueue();
             DebugDrawer.xzMode = (generationPlane == GenerationPlane.XZ);
             OnUpdate?.Invoke();
 
-			if (debugQueueText is { Visible: true })
-				debugQueueText.Text = MainThreadActionQueue.idle ? string.Empty
-					: "Action Queue: " + MainThreadActionQueue.queueCount;
+            DebugDraw2D.SetText("Action Queue", MainThreadActionQueue.idle ? string.Empty : MainThreadActionQueue.queueCount);
+			// if (debugQueueText is { Visible: true })
+				// debugQueueText.Text = MainThreadActionQueue.idle ? string.Empty : "Action Queue: " + MainThreadActionQueue.queueCount;
 			if (debugStatusText is { Visible: true })
 				debugStatusText.Text = SimpleProfiler.GetStatus();
         }

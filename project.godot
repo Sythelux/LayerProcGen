@@ -11,12 +11,21 @@ config_version=5
 [application]
 
 config/name="LayerProcGen"
+run/main_scene="res://Samples/LayerProcGen/0.1.0/Simple Samples/PointsSpawningScene.scn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 config/icon="res://icon.svg"
+
+[debug_draw_3d]
+
+settings/3d/volumetric_defaults/thickness=5.0
 
 [dotnet]
 
 project/assembly_name="LayerProcGen"
+
+[editor]
+
+movie_writer/movie_file="/media/data/Syd/Videos/LayerProcGen/PointsSpawningScene.avi"
 
 [editor_plugins]
 

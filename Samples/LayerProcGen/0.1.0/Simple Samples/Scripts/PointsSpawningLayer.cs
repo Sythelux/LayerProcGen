@@ -37,7 +37,8 @@ public class PointsSpawningChunk : LayerChunk<PointsSpawningLayer, PointsSpawnin
 					meshInstance3D.Mesh = new SphereMesh();
 					Transform3D tr = meshInstance3D.Transform;
 					tr.Origin = new Vector3(currentPoint.x, 0f, currentPoint.y);
-					tr.ScaledLocal( Vector3.One * 50f);
+					tr = tr.ScaledLocal( Vector3.One * 50f);
+					meshInstance3D.Transform = tr;
 					currentChunkParent.AddChild(meshInstance3D);
 				});
 			}
@@ -48,7 +49,7 @@ public class PointsSpawningChunk : LayerChunk<PointsSpawningLayer, PointsSpawnin
 	}
 }
 
-public class PointsSpawningLayer : ChunkBasedDataLayer<PointsSpawningLayer, PointsSpawningChunk> {
+public class PointsSpawningLayer : ChunkBasedDataLayer<PointsSpawningLayer, PointsSpawningChunk>, IGodotInstance {
 	// Specify the world space dimensions of the chunks.
 	public override int chunkW { get { return 100; } }
 	public override int chunkH { get { return 100; } }
@@ -64,4 +65,6 @@ public class PointsSpawningLayer : ChunkBasedDataLayer<PointsSpawningLayer, Poin
 		// Dependencies on other layers are set up here with appropriate padding.
 		AddLayerDependency(new LayerDependency(PointsLayer.instance, new Point(0, 0)));
 	}
+
+	public Node LayerRoot() => layerParent;
 }

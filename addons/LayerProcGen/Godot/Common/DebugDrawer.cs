@@ -65,8 +65,8 @@ namespace Runevision.Common {
 		public static Projection matrix = Projection.Identity;
 
 		static Gradient.ColorSpace colorSpace;
-		List<Line> linesZOn;
-		List<Line> linesZOff;
+		// List<Line> linesZOn;
+		// List<Line> linesZOff;
 		List<Line> linesZOnMultiFrame;
 		List<Line> linesZOffMultiFrame;
 
@@ -78,8 +78,8 @@ namespace Runevision.Common {
 			}
 			s_Instance = this;
 			SetMaterial();
-			linesZOn = new List<Line>();
-			linesZOff = new List<Line>();
+			// linesZOn = new List<Line>();
+			// linesZOff = new List<Line>();
 			linesZOnMultiFrame = new List<Line>();
 			linesZOffMultiFrame = new List<Line>();
 			colorSpace = Gradient.ColorSpace.LinearSrgb;
@@ -96,8 +96,8 @@ namespace Runevision.Common {
 		}
 
 		public override void _Process(double deltaTime) {
-			linesZOn.Clear();
-			linesZOff.Clear();
+			// linesZOn.Clear();
+			// linesZOff.Clear();
 			CullList(linesZOnMultiFrame);
 			CullList(linesZOffMultiFrame);
 			s_LastTime = (float)deltaTime;
@@ -122,13 +122,13 @@ namespace Runevision.Common {
 
 			 s_MatZOn.Shader.Set("Pass",0); //TODO: s_MatZOn.SetPass(0);
 			// GL.Begin(GL.LINES);
-			DrawList(linesZOn);
+			// DrawList(linesZOn);
 			DrawList(linesZOnMultiFrame);
 			// GL.End();
 
 			s_MatZOff.Shader.Set("Pass",0); //TODO: s_MatZOff.SetPass(0);
 			// GL.Begin(GL.LINES);
-			DrawList(linesZOff);
+			// DrawList(linesZOff);
 			DrawList(linesZOffMultiFrame);
 			// GL.End();
 		}
@@ -157,16 +157,21 @@ namespace Runevision.Common {
 			start = matrix.MultiplyPoint3x4(start);
 			end = matrix.MultiplyPoint3x4(end);
 			if (duration <= 0) {
-				if (depthTest) {
-					lock (s_Instance.linesZOn) {
-						s_Instance.linesZOn.Add(new Line(start, end, color, s_LastTime, duration));
-					}
-				}
-				else {
-					lock (s_Instance.linesZOff) {
-						s_Instance.linesZOff.Add(new Line(start, end, color, s_LastTime, duration));
-					}
-				}
+				DebugDraw3D.DrawLine(start, end, color, duration);
+
+				// if (depthTest) //TODO: not implemented by DebugDraw3D, yet: https://github.com/DmitriySalnikov/godot_debug_draw_3d/issues/44
+				// {
+				// 	DebugDraw3D.DrawLine(start, end, color, duration);
+					// lock (s_Instance.linesZOn) {
+					// 	s_Instance.linesZOn.Add(new Line(start, end, color, s_LastTime, duration));
+					// }
+				// }
+				// else {
+					// lock (s_Instance.linesZOff)
+					// {
+					// 	s_Instance.linesZOff.Add(new Line(start, end, color, s_LastTime, duration));
+					// }
+				// }
 			}
 			else {
 				if (depthTest) {

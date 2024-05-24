@@ -12,6 +12,20 @@ public partial class GenerationSource
 {
     static string[] layerTypeStrings;
 
+    [Export]
+    private string Layer
+    {
+        get => layer.className;
+        set => layer.className = value;
+    }
+
+    [Export]
+    private Vector2 Size
+    {
+        get => size;
+        set => size = (Point)value;
+    }
+
     public override Array<Dictionary> _GetPropertyList()
     {
         var properties = new Array<Dictionary>
@@ -20,47 +34,16 @@ public partial class GenerationSource
             {
                 { "name", "Layer" },
                 { "type", (int)Variant.Type.StringName },
-                { "usage", (int)PropertyUsageFlags.Default }, // See above assignment.
+                { "usage", (int)PropertyUsageFlags.Default },
                 { "hint", (int)PropertyHint.Enum },
                 { "hint_string", FillLayerHintString() }
-            },
-            new()
-            {
-                { "name", "Size" },
-                { "type", (int)Variant.Type.Vector2 },
             }
         };
 
         return properties;
     }
 
-    public override Variant _Get(StringName property)
-    {
-        return (string)property switch
-        {
-            "Layer" => layer?.className ?? string.Empty,
-            "Size" => (Vector2)size,
-            _ => base._Get(property)
-        };
-    }
-
-    public override bool _Set(StringName property, Variant value)
-    {
-        switch (property)
-        {
-            case "Layer":
-                layer ??= new LayerNamedReference();
-                layer.className = value.AsString();
-                return true;
-            case "Size":
-                size = (Point)value.AsVector2();
-                return true;
-            default:
-                return base._Set(property, value);
-        }
-    }
-
-    private string FillLayerHintString()
+    public static string FillLayerHintString()
     {
         if (layerTypeStrings == null)
         {
