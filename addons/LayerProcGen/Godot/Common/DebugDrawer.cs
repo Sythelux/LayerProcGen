@@ -156,7 +156,8 @@ namespace Runevision.Common {
 				color.A *= color.A;
 			start = matrix.MultiplyPoint3x4(start);
 			end = matrix.MultiplyPoint3x4(end);
-			if (duration <= 0) {
+			if (duration <= 0)
+			{
 				DebugDraw3D.DrawLine(start, end, color, duration);
 
 				// if (depthTest) //TODO: not implemented by DebugDraw3D, yet: https://github.com/DmitriySalnikov/godot_debug_draw_3d/issues/44

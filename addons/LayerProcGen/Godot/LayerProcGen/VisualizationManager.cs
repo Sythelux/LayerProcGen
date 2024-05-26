@@ -9,6 +9,7 @@
 using Runevision.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Godot;
 
 namespace Runevision.LayerProcGen
@@ -36,6 +37,7 @@ namespace Runevision.LayerProcGen
     /// </remarks>
     public partial class VisualizationManager : Node
     {
+        [MaybeNull]
         public static VisualizationManager instance;
 
         public DebugToggle debugChunkBounds = DebugToggle.Create("LayerVis/Chunk Bounds", true);
@@ -607,7 +609,7 @@ namespace Runevision.LayerProcGen
         //     if (labelStyle == null)
         //     {
         //         labelStyle = new GUIStyle();
-        //         labelStyle.normal.textColor = Color.white;
+        //         labelStyle.normal.textColor = Colors.White;
         //         labelStyle.hover.textColor = labelStyle.normal.textColor;
         //         labelStyle.padding = new RectOffset(0, 0, 3, 6);
         //     }

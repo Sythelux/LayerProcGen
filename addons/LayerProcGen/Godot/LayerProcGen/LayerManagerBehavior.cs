@@ -8,6 +8,7 @@
 
 using Runevision.Common;
 using System;
+using System.Collections;
 using Godot;
 
 namespace Runevision.LayerProcGen {
@@ -51,11 +52,15 @@ namespace Runevision.LayerProcGen {
             DebugDrawer.xzMode = (generationPlane == GenerationPlane.XZ);
             OnUpdate?.Invoke();
 
-            DebugDraw2D.SetText("Action Queue", MainThreadActionQueue.idle ? string.Empty : MainThreadActionQueue.queueCount);
-			// if (debugQueueText is { Visible: true })
-				// debugQueueText.Text = MainThreadActionQueue.idle ? string.Empty : "Action Queue: " + MainThreadActionQueue.queueCount;
+            // DebugDraw2D.SetText("Action Queue", MainThreadActionQueue.idle ? string.Empty : MainThreadActionQueue.queueCount); alternative
+			if (debugQueueText is { Visible: true })
+				debugQueueText.Text = MainThreadActionQueue.idle ? string.Empty : "Action Queue: " + MainThreadActionQueue.queueCount;
 			if (debugStatusText is { Visible: true })
 				debugStatusText.Text = SimpleProfiler.GetStatus();
+        }
+
+        public void StartCoroutine(IEnumerator coroutine)
+        {
         }
     }
 }

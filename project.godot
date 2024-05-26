@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="LayerProcGen"
-run/main_scene="res://Samples/LayerProcGen/0.1.0/Simple Samples/PointsSpawningScene.scn"
+run/main_scene="res://Samples/LayerProcGen/0.1.0/TerrainSample/TerrainScene.scn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -29,4 +29,4 @@ movie_writer/movie_file="/media/data/Syd/Videos/LayerProcGen/PointsSpawningScene
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/terrain_3d/plugin.cfg")
+enabled=PackedStringArray("res://addons/proton_scatter/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
