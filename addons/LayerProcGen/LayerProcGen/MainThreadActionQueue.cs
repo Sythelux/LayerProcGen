@@ -163,7 +163,7 @@ namespace Runevision.LayerProcGen {
 				}
 			}
 			watch.Start();
-			//// UnityEngine.Profiling.Profiler.BeginSample("Fast Track Actions");
+			//UnityEngine.Profiling.Profiler.BeginSample("Fast Track Actions");
 			while (true) {
 				IQueuedAction i;
 				lock (s_FastTrack) {
@@ -171,13 +171,13 @@ namespace Runevision.LayerProcGen {
 						break;
 					i = s_FastTrack.Dequeue();
 				}
-				//// UnityEngine.Profiling.Profiler.BeginSample(i.GetType().Name);
+				//UnityEngine.Profiling.Profiler.BeginSample(i.GetType().Name);
 				i.Process();
 				WorkTracker.AddWorkDone(1, typeof(IQueuedAction));
-				//// UnityEngine.Profiling.Profiler.EndSample();
+				//UnityEngine.Profiling.Profiler.EndSample();
 			}
-			//// UnityEngine.Profiling.Profiler.EndSample();
-			//// UnityEngine.Profiling.Profiler.BeginSample("Queued Actions");
+			//UnityEngine.Profiling.Profiler.EndSample();
+			//UnityEngine.Profiling.Profiler.BeginSample("Queued Actions");
 			while (true) {
 				IQueuedAction i;
 				lock (s_Queue) {
@@ -185,12 +185,12 @@ namespace Runevision.LayerProcGen {
 						break;
 					i = s_Queue.Dequeue();
 				}
-				//// UnityEngine.Profiling.Profiler.BeginSample(i.GetType().Name);
+				//UnityEngine.Profiling.Profiler.BeginSample(i.GetType().Name);
 				i.Process();
 				WorkTracker.AddWorkDone(1, typeof(IQueuedAction));
-				//// UnityEngine.Profiling.Profiler.EndSample();
+				//UnityEngine.Profiling.Profiler.EndSample();
 			}
-			//// UnityEngine.Profiling.Profiler.EndSample();
+			//UnityEngine.Profiling.Profiler.EndSample();
 			watch.Reset();
 		}
 	}
