@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3 uid="uid://ctta40u47wraq"]
+
+[ext_resource type="PackedScene" uid="uid://83643r4d4fkm" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/FirstPersonController.prefab.scn" id="1_4ixqw"]
+
+[node name="FlyCameraTest" type="Node3D"]
+
+[node name="CSGBox3D" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.73468, 0, 0)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.73468, 0.16893, -1.28749)
+
+[node name="CSGBox3D12" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.89639, 0.16893, 4.69422)
+
+[node name="CSGBox3D9" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.8161, 0.16893, 13.9097)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.15952, 0.16893, -3.08313)
+
+[node name="CSGBox3D11" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.1778, 0.16893, 19.4503)
+
+[node name="CSGBox3D10" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.3307, 0.16893, 12.3074)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.71339, 0.16893, 1.72535)
+
+[node name="CSGBox3D8" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.71339, -8.68157, 10.1235)
+
+[node name="CSGBox3D7" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.10163, 0.16893, 25.9942)
+
+[node name="CSGBox3D6" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.71339, -26.5464, 20.8094)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.71339, 8.23004, 9.76332)
+
+[node name="FirstPersonController" parent="." instance=ExtResource("1_4ixqw")]
+transform = Transform3D(-1, 0, 3.89414e-07, 0, 1, 0, -3.89414e-07, 0, -1, 0.141365, 0, 8.89974)

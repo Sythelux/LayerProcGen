@@ -26,7 +26,7 @@ public partial class TerrainLODManager : Node {
 
 	public override void _Ready() {
 		instance = this;
-		layers = new TerrainLODLayer[4];
+		layers = new TerrainLODLayer[1];
 		SetupLODLayer(0, LandscapeLayerA.instance);
 		// SetupLODLayer(1, LandscapeLayerB.instance);
 		// SetupLODLayer(2, LandscapeLayerC.instance);
@@ -88,7 +88,7 @@ public partial class TerrainLODManager : Node {
 		if (debugLODBounds.visible) {
 			
 			DebugDrawer.alpha = debugLODBounds.animAlpha;
-			var lowestLayer = layers[layers.Length - 1].layer;
+			var lowestLayer = layers[^1].layer;
 			VisualizationManager.BeginDebugDraw(lowestLayer, 0);
 			DebugDrawer.DrawRect(
 				lastLowerLevelBounds.min * lowestLayer.chunkW,

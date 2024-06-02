@@ -20,6 +20,11 @@ public partial class LayerProcGen : EditorPlugin
         // AddControlToDock(DockSlot.LeftUl, DebugOptionsEditor);
     }
 
+    public override void _Ready()
+    {
+        AddAutoloadSingleton(nameof(CallbackHub), ResourcePath($"Godot/Common/{nameof(CallbackHub)}.cs"));
+    }
+
     public override string _GetPluginName()
     {
         return "LayerProcGen";
@@ -49,6 +54,7 @@ public partial class LayerProcGen : EditorPlugin
     {
         RemoveControlFromDocks(DebugOptionsEditor);
         DebugOptionsEditor?.QueueFree();
+        RemoveAutoloadSingleton(nameof(CallbackHub));
         // RemoveInspectorPlugin(DebugWindowPlugin);
     }
 
