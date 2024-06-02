@@ -29,4 +29,4 @@ movie_writer/movie_file="/media/data/Syd/Videos/LayerProcGen/PointsSpawningScene
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/proton_scatter/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
+enabled=PackedStringArray("res://addons/LayerProcGen/plugin.cfg", "res://addons/proton_scatter/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")

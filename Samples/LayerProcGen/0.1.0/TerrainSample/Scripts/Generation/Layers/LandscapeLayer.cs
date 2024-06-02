@@ -135,12 +135,16 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
         LayerManagerBehavior.instance.StartCoroutine(ProcessRoutine());
     }
 
-    public IEnumerator ProcessRoutine()
+    public IEnumerator? ProcessRoutine()
     {
         Node3D terrain = GetOrCreateTerrain(layer);
 
         // Profiler.BeginSample("Get terrainData");
-        var data = new Terrain3D(terrain.FindChildren("*", nameof(Terrain3D)).FirstOrDefault());
+        var terrainNode = terrain.FindChildren("*", nameof(Terrain3D), owned: false).FirstOrDefault();
+        if (terrainNode == null)
+            yield break;
+
+        var data = new Terrain3D(terrainNode);
         // Profiler.EndSample();
 
         int sliceCount = 16;
@@ -186,6 +190,7 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
         // Profiler.EndSample();
 
         chunkParent.AddChild(data.Instance as Node3D);
+
         terrain.Position = position;
 
         // Profiler.BeginSample("Flush");
@@ -239,7 +244,7 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     Array<float>? heightsNA;
     Array<Vector3>? distsNA;
     Array<Vector4>? splatsNA;
-    public Array2D<float> heights;
+    public Array2D<float> heights; //TODO: Godot Arrays are slower than Native arrays, but at least they seem like memory safe pointer array alternative?
     public Array2D<Vector3> dists;
     public Array2D<Vector4> splats;
     float[,] heightsArray;
@@ -431,9 +436,9 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     {
         // Skip edges in iteration - we need those for calculating normal only.
         float doubleCellSize = 2f * (float)cellSize.x;
-        for (var zRes = 1; zRes <= gridResolution; zRes++)
+        for (var zRes = 1; zRes < gridResolution; zRes++)
         {
-            for (var xRes = 1; xRes <= gridResolution; xRes++)
+            for (var xRes = 1; xRes < gridResolution; xRes++)
             {
                 Vector4 current = splats[zRes, xRes];
                 GetNormal(xRes, zRes, doubleCellSize, heights, out Vector3 normal);

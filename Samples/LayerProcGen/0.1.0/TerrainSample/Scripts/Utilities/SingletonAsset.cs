@@ -7,17 +7,21 @@ public  abstract partial class SingletonAsset<T> : Resource where T : Resource, 
 	static object loadLock = new object();
 	public static T instance {
 		get {
-			if (s_Instance == null) {
+			if (s_Instance == null)
+			{
 				// CallbackHub.ExecuteOnMainThread(() => {
-					lock (loadLock) {
-						if (s_Instance == null) {
-							s_Instance = ResourceLoader.Load<T>(typeof(T).Name);
-							(s_Instance as SingletonAsset<T>).OnInitialize();
-						}
+				lock (loadLock)
+				{
+					if (s_Instance == null)
+					{
+						s_Instance = ResourceLoader.Load<T>($"res://Resources/{typeof(T).Name}.tres") 
+						             ?? ResourceLoader.Load<T>($"res://Resources/{typeof(T).Name}.res");
+						(s_Instance as SingletonAsset<T>).OnInitialize();
 					}
+				}
 				// });
-				while (s_Instance == null)
-					System.Threading.Thread.Sleep(1);
+				// while (s_Instance == null)
+				// 	System.Threading.Thread.Sleep(1);
 			}
 			return s_Instance;
 		}

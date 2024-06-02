@@ -23,14 +23,14 @@ public class Array2D<[MustBeVariant] T>
 
     public T this[uint y, uint x]
     {
-        get => Array[(int)(y * Width % Width + x)];
-        set => Array[(int)(y * Width % Width + x)] = value;
+        get => Array[(int)(y * Width + x)];
+        set => Array[(int)(y * Width + x)] = value;
     }
 
     public T this[int y, int x]
     {
-        get => Array[y * Width % Width + x];
-        set => Array[y * Width % Width + x] = value;
+        get => Array[y * Width + x];
+        set => Array[y * Width + x] = value;
     }
 
     public Array2D(int height, int width)

@@ -1,6 +1,8 @@
 ﻿using Godot;
 using Terrain3DBindings;
 
+[Tool]
+[GlobalClass]
 public partial class TerrainResources : SingletonAsset<TerrainResources> {
 	[Export]
 	public Texture2D grassTex;

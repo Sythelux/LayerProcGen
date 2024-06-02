@@ -24,10 +24,10 @@ public partial class TerrainLODManager : Node {
 
 	DebugToggle debugLODBounds = DebugToggle.Create(">Visualizations/Terrain LOD Bounds");
 
-	void Awake() {
+	public override void _Ready() {
 		instance = this;
 		layers = new TerrainLODLayer[4];
-		// SetupLODLayer(0, LandscapeLayerA.instance);
+		SetupLODLayer(0, LandscapeLayerA.instance);
 		// SetupLODLayer(1, LandscapeLayerB.instance);
 		// SetupLODLayer(2, LandscapeLayerC.instance);
 		// SetupLODLayer(3, LandscapeLayerD.instance);
@@ -52,7 +52,8 @@ public partial class TerrainLODManager : Node {
 		}
 	}
 
-	void LateUpdate() {
+	public override void _PhysicsProcess(double delta)
+	{
 		if (anyRegistrationChanges) {
 			anyRegistrationChanges = false;
 
@@ -105,7 +106,9 @@ public partial class TerrainLODManager : Node {
 					if (active || (VisualizationManager.instance != null && VisualizationManager.instance.debugSeparate.visible)
 					) {
 						Vector2 pos = terrain.Position.xz();
-						int regionSize = (int)new Terrain3D(terrain.FindChildren("*", nameof(Terrain3D)).FirstOrDefault()).Storage.RegionSize;
+						var terrainNode = terrain.FindChildren("*", nameof(Terrain3D), owned:false).FirstOrDefault();
+						if (terrainNode == null) continue;
+						int regionSize = (int)new Terrain3D(terrainNode).Storage.RegionSize;
 						Vector2 size = new Vector2(regionSize, regionSize);//terrain.terrainData.size.xz() * 0.5f;
 
 						// Draw rect.
@@ -129,11 +132,11 @@ public partial class TerrainLODManager : Node {
 		
 	}
 
-	Color[] levelColors = new Color[] {
-		new Color(1.0f, 0.9f, 0.1f),
-		new Color(0.1f, 1.0f, 0.7f),
-		new Color(0.1f, 0.3f, 1.0f),
-		new Color(0.8f, 0.1f, 0.5f)
+	Color[] levelColors = {
+		new(1.0f, 0.9f, 0.1f),
+		new(0.1f, 1.0f, 0.7f),
+		new(0.1f, 0.3f, 1.0f),
+		new(0.8f, 0.1f, 0.5f)
 	};
 
 	// Returns true if full area is handled.
