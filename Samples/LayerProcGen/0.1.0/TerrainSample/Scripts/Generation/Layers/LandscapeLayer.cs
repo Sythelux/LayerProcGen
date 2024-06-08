@@ -1,13 +1,25 @@
-#nullable enable
+using Godot;
 using Runevision.Common;
 using Runevision.LayerProcGen;
+using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using Godot;
-using Godot.Collections;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using Terrain3DBindings;
 
+/// <summary>
+/// Unlike Unity The Terrain3D Plugin in Godot has some differences:
+/// - built-in LOD, which also acts differently than the rest of Godot
+///     - we can remove the LOD from here and let Terrain3D handle it internally
+///     - TODO: the lod is also used to decide if CultivationLayer and LocationLayer is being active or not
+/// - the Region Size is currently limited to 1024, more might come in the future
+///     - this is fine we can just remove the Terrain Variation A-D and only leave one that has 1024 size
+/// - one Terrain3D holds multiple regions as Array
+///     - we use those such, that a Chunk is a region.
+/// </summary>
+/// <typeparam name="L"></typeparam>
+/// <typeparam name="C"></typeparam>
 public struct QueuedTerrainCallback<L, C> : IQueuedAction
     where L : LandscapeLayer<L, C>, new()
     where C : LandscapeChunk<L, C>, new()
@@ -42,92 +54,86 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
         this.index = index;
     }
 
-    static Node3D GetOrCreateTerrain(L layer)
+    static Terrain3D? GetOrCreateTerrain(L layer)
     {
-        int unusedCount = layer.unusedTerrains.Count;
-        if (unusedCount > 0)
+        // int unusedCount = layer.unusedTerrains.Count;
+        // if (unusedCount > 0)
+        // {
+        //     Node3D existingTerrain = layer.unusedTerrains[unusedCount - 1];
+        //     layer.unusedTerrains.RemoveAt(unusedCount - 1);
+        //     Logg.Log("Reusing terrain", false);
+        //     return existingTerrain;
+        // }
+
+        if (layer.layerParent == null)
         {
-            Node3D existingTerrain = layer.unusedTerrains[unusedCount - 1];
-            layer.unusedTerrains.RemoveAt(unusedCount - 1);
-            Logg.Log("Reusing terrain", false);
-            return existingTerrain;
+
+            Logg.Log("Creating new terrain", false);
+
+            // Set heights.
+            //TerrainData data = new TerrainData(); // Doesn't work anymore for grass detail.
+            Terrain3D terrain = new Terrain3D();
+            Terrain3DStorage data = TerrainResources.instance.TerrainData;
+            data.RegionSize = RegionSize.SIZE_1024; //there is only one size currently
+            data.HeightRange = new Vector2(layer.terrainBaseHeight, layer.terrainHeight);
+            // data.heightmapResolution = layer.gridResolution + 1;
+            // data.alphamapResolution = layer.gridResolution + 1;
+            // data.SetDetailResolution(layer.gridResolution, 32);
+            // data.size = new Vector3(
+            // 	layer.chunkW * 128 / 124,
+            // 	layer.terrainHeight,
+            // 	layer.chunkH * 128 / 124
+            // );
+
+            terrain.Storage = data;
+            terrain.TextureList = TerrainResources.instance.TextureList;
+
+            // Set detail maps.
+            if (layer.lodLevel == 0)
+            {
+                // DetailPrototype grassDetail = new DetailPrototype(); //<- proton scatter instead
+                // grassDetail.prototypeTexture = TerrainResources.instance.grassDetail;
+                // grassDetail.healthyColor = new Color(0.9f, 1.0f, 1.1f);
+                // grassDetail.dryColor = new Color(1.1f, 1.0f, 0.9f);
+                // grassDetail.minHeight = 0.3f;
+                // grassDetail.maxHeight = 0.6f;
+                // grassDetail.minWidth = 0.4f;
+                // grassDetail.maxWidth = 0.7f;
+                // data.detailPrototypes = new DetailPrototype[] { grassDetail };
+                // #if UNITY_2022_3_OR_NEWER
+                // data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+                // #endif
+                // data.wavingGrassAmount = 0.03f;
+                // data.wavingGrassSpeed = 30;
+                // data.wavingGrassStrength = 4;
+                // data.wavingGrassTint = Colors.White * 0.7f;
+            }
+
+            // Create GameObject and Terrain3D.
+            if (layer.lodLevel == 0)
+            {
+                //TODO: maybe generate nav mesh here?
+            }
+
+            Node3D terrainNode = terrain.Instance as Node3D;
+
+            terrainNode.Name = "Terrain3D" + layer.lodLevel;
+            // terrainNode.Visible = false;
+
+            // Setup Terrain3D component.
+            // terrain.allowAutoConnect = false;
+            // terrain.drawInstanced = true;
+            //TODO: this is "inverted" somehow terrain.mesh_lods = layer.lodLevel;
+            // terrain.heightmapPixelError = 8;
+            terrain.Material = TerrainResources.instance.Material;
+            // terrain.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+            // terrain.detailObjectDistance = 50;
+            // terrain.treeBillboardDistance = 70;
+            // terrain.treeDistance = 2000;
+            layer.layerParent = terrain;
+
         }
-
-        Logg.Log("Creating new terrain", false);
-
-        // Set heights.
-        //TerrainData data = new TerrainData(); // Doesn't work anymore for grass detail.
-        Terrain3D terrain = new Terrain3D();
-        Terrain3DStorage data = TerrainResources.instance.TerrainData;
-        // data.heightmapResolution = layer.gridResolution + 1;
-        // data.alphamapResolution = layer.gridResolution + 1;
-        // data.SetDetailResolution(layer.gridResolution, 32);
-        // data.size = new Vector3(
-        // 	layer.chunkW * 128 / 124,
-        // 	layer.terrainHeight,
-        // 	layer.chunkH * 128 / 124
-        // );
-
-        // Set splat maps.
-        var grassSplat = new Terrain3DTexture();
-        var cliffSplat = new Terrain3DTexture();
-        var pathSplat = new Terrain3DTexture();
-        grassSplat.AlbedoTexture = TerrainResources.instance.grassTex;
-        cliffSplat.AlbedoTexture = TerrainResources.instance.cliffTex;
-        pathSplat.AlbedoTexture = TerrainResources.instance.pathTex;
-        // grassSplat.tileSize = Vector2.One * 3.0f;
-        // cliffSplat.tileSize = Vector2.One * 6.0f;
-        // pathSplat.tileSize  = Vector2.One * 2.0f;
-        terrain.Storage = data;
-        terrain.TextureList = new Terrain3DTextureList();
-        terrain.TextureList.SetTexture(0, grassSplat);
-        terrain.TextureList.SetTexture(1, cliffSplat);
-        terrain.TextureList.SetTexture(2, pathSplat);
-
-        // Set detail maps.
-        if (layer.lodLevel == 0)
-        {
-            // DetailPrototype grassDetail = new DetailPrototype(); //<- proton scatter instead
-            // grassDetail.prototypeTexture = TerrainResources.instance.grassDetail;
-            // grassDetail.healthyColor = new Color(0.9f, 1.0f, 1.1f);
-            // grassDetail.dryColor = new Color(1.1f, 1.0f, 0.9f);
-            // grassDetail.minHeight = 0.3f;
-            // grassDetail.maxHeight = 0.6f;
-            // grassDetail.minWidth = 0.4f;
-            // grassDetail.maxWidth = 0.7f;
-            // data.detailPrototypes = new DetailPrototype[] { grassDetail };
-            // #if UNITY_2022_3_OR_NEWER
-            // data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
-            // #endif
-            // data.wavingGrassAmount = 0.03f;
-            // data.wavingGrassSpeed = 30;
-            // data.wavingGrassStrength = 4;
-            // data.wavingGrassTint = Colors.White * 0.7f;
-        }
-
-        // Create GameObject and Terrain3D.
-        Node3D newTerrainGameObject = new Node3D();
-        if (layer.lodLevel == 0)
-        {
-            //TODO: maybe generate nav mesh here?
-        }
-
-        newTerrainGameObject.AddChild(terrain.Instance as Node3D);
-        newTerrainGameObject.Name = "Terrain3D" + layer.lodLevel;
-        newTerrainGameObject.Visible = false;
-
-        // Setup Terrain3D component.
-        // terrain.allowAutoConnect = false;
-        // terrain.drawInstanced = true;
-        // terrain.groupingID = layer.lodLevel;
-        // terrain.heightmapPixelError = 8;
-        terrain.Material = TerrainResources.instance.Material;
-        // terrain.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-        // terrain.detailObjectDistance = 50;
-        // terrain.treeBillboardDistance = 70;
-        // terrain.treeDistance = 2000;
-
-        return newTerrainGameObject;
+        return layer.layerParent;
     }
 
     public void Process()
@@ -137,20 +143,19 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
 
     public IEnumerator? ProcessRoutine()
     {
-        Node3D terrain = GetOrCreateTerrain(layer);
+        Terrain3D? terrain = GetOrCreateTerrain(layer);
 
         // Profiler.BeginSample("Get terrainData");
-        var terrainNode = terrain.FindChildren("*", nameof(Terrain3D), owned: false).FirstOrDefault();
-        if (terrainNode == null)
+        // var terrainNode = terrain.FindChildren("*", nameof(Terrain3D), owned: false).FirstOrDefault();
+        if (terrain == null)
             yield break;
 
-        var data = new Terrain3D(terrainNode);
         // Profiler.EndSample();
 
         int sliceCount = 16;
         int res = heightmap.GetLength(0);
         int sliceSize = (res - 1) / sliceCount;
-        float[,] slice = new float[sliceSize + 1, res];
+        // float[,] slice = new float[sliceSize + 1, res];
         for (int i = 0; i < sliceCount; i++)
         {
             // Profiler.BeginSample("CopyIntoSlice");
@@ -159,18 +164,24 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
             {
                 for (int x = 0; x < res; x++)
                 {
-                    slice[z, x] = heightmap[z + offset, x];
+                    // slice[z, x] = heightmap[z + offset, x];
+                    terrain.Storage.SetHeight(new Vector3(x + (index.x * (res - 1)), 0, (z + offset) + (index.y * (res - 1))), heightmap[z + offset, x]);
+                    //TODO: setting single pixels is very slow and we should instead make the heightmap array an image
                 }
             }
+            Console.Write("|");
+            Console.Write($"{0 + index.x * (res - 1)};{(0 + offset) + (index.y * (res - 1))};");
+            Console.Write($"{(res - 1) + index.x * (res - 1)};{((sliceSize) + offset) + (index.y * (res - 1))}");
+            Console.WriteLine();
 
             // Profiler.EndSample();
             // Profiler.BeginSample("SetHeightsDelayLOD");
             // data.SetHeightsDelayLOD(0, offset, slice);
             // Profiler.EndSample();
+            terrain.Storage.ForceUpdateMaps(MapType.TYPE_HEIGHT);
             yield return null;
         }
         // Profiler.BeginSample("SyncHeightmap");
-        // data.SyncHeightmap();
         // Profiler.EndSample();
 
         // Profiler.BeginSample("SetAlphamaps");
@@ -189,16 +200,16 @@ public struct QueuedTerrainCallback<L, C> : IQueuedAction
         // data.treeInstances = treeInstances;
         // Profiler.EndSample();
 
-        chunkParent.AddChild(data.Instance as Node3D);
+        // chunkParent.AddChild(terrain.Instance as Node3D);
 
-        terrain.Position = position;
+        // terrain.Position = position;
 
         // Profiler.BeginSample("Flush");
         // terrain.Flush();
         // Profiler.EndSample();
 
         // Profiler.BeginSample("Register");
-        TerrainLODManager.instance.RegisterChunk(layer.lodLevel, index, terrain);
+        TerrainLODManager.instance.RegisterChunk(layer.lodLevel, index, terrain.Storage);
         // Profiler.EndSample();
     }
 }
@@ -220,65 +231,51 @@ public struct QueuedTerrainRecycleCallback<L, C> : IQueuedAction
             return;
         }
 
-        Terrain3D terrain = new Terrain3D(chunkParent.transform.FindChildren("*", nameof(Terrain3D)).FirstOrDefault());
+        Terrain3D terrain = new Terrain3D(chunkParent.transform); //.transform.FindChildren("*", nameof(Terrain3D)).FirstOrDefault()
         if (terrain.Instance is Node3D terrainInstance)
         {
             terrainInstance.Reparent(default);
             terrainInstance.Visible = false;
-            layer.unusedTerrains.Add(terrainInstance.GetParentNode3D());
+            // layer.unusedTerrains.Add(terrainInstance.GetParentNode3D());
             chunkParent.transform.QueueFree();
             TerrainLODManager.instance.UnregisterChunk(layer.lodLevel, index);
         }
     }
 }
 
-// TODO: we have to revisit [BurstCompile]. Godot has a mechanic called Servers, which you can use instead, but needs deep rewrite
 public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     where L : LandscapeLayer<L, C>, new()
     where C : LandscapeChunk<L, C>, new()
 {
     public TransformWrapper chunkParent;
 
-    public static FastNoiseLite TerrainNoise;
 
-    Array<float>? heightsNA;
-    Array<Vector3>? distsNA;
-    Array<Vector4>? splatsNA;
-    public Array2D<float> heights; //TODO: Godot Arrays are slower than Native arrays, but at least they seem like memory safe pointer array alternative?
-    public Array2D<Vector3> dists;
-    public Array2D<Vector4> splats;
+    // Array<float>? heightsNA;
+    // Array<Vector3>? distsNA;
+    // Array<Vector4>? splatsNA;
+    public float[,] heights; //TODO: Godot Arrays are slower than Native arrays, but at least they seem like memory safe pointer array alternative?
+    public Vector3[,] dists;
+    public Vector4[,] splats;
     float[,] heightsArray;
     float[,,] splatsArray;
     int[,] detailMap;
 
     public LandscapeChunk()
     {
-        heights = new Array2D<float>(layer.gridResolution + 1, layer.gridResolution + 1, out heightsNA);
-        dists = new Array2D<Vector3>(layer.gridResolution + 1, layer.gridResolution + 1, out distsNA);
-        splats = new Array2D<Vector4>(layer.gridResolution + 1, layer.gridResolution + 1, out splatsNA);
+        heights = new float[layer.gridResolution + 1, layer.gridResolution + 1];
+        dists = new Vector3[layer.gridResolution + 1, layer.gridResolution + 1];
+        splats = new Vector4[layer.gridResolution + 1, layer.gridResolution + 1];
         heightsArray = new float[layer.gridResolution + 1, layer.gridResolution + 1];
         splatsArray = new float[layer.gridResolution + 1, layer.gridResolution + 1, 3];
         detailMap = new int[layer.gridResolution, layer.gridResolution];
         LayerManager.instance.abort += Dispose;
     }
 
-    static LandscapeChunk()
-    {
-        TerrainNoise = new FastNoiseLite();
-        TerrainNoise.SetNoiseType(FastNoiseLite.NoiseTypeEnum.Perlin);
-
-        TerrainNoise.SetFrequency(0.01f);
-        TerrainNoise.SetFractalLacunarity(2f);
-        TerrainNoise.SetFractalGain(0.5f);
-
-        TerrainNoise.SetFractalType(FastNoiseLite.FractalTypeEnum.Fbm);
-    }
-
     public void Dispose()
     {
-        heightsNA?.Clear();
-        distsNA?.Clear();
-        splatsNA?.Clear();
+        // heightsNA?.Clear();
+        // distsNA?.Clear();
+        // splatsNA?.Clear();
     }
 
     public override void Create(int level, bool destroy)
@@ -292,20 +289,20 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
                 };
             MainThreadActionQueue.Enqueue(action);
 
-            if (heightsNA != null)
-            {
-                heights.Clear();
-                dists.Clear();
-                heightsArray.Clear();
-                splats.Clear();
-                splatsArray.Clear();
-                detailMap.Clear();
-            }
+            // if (heightsNA != null)
+            // {
+            // heights.Clear();
+            // dists.Clear();
+            heightsArray.Clear();
+            // splats.Clear();
+            splatsArray.Clear();
+            detailMap.Clear();
+            // }
         }
         else
         {
-            chunkParent = new TransformWrapper(layer.layerParent, index);
             Build();
+            // chunkParent = new TransformWrapper(layer.layerParent.Instance as Node3D, index);
         }
     }
 
@@ -323,7 +320,9 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
 
         // Apply noise heights.
         ph = SimpleProfiler.Begin(phc, "Height Noise");
-        HeightNoise(terrainOrigin, cellSize, layer.gridResolution, ref heights, ref dists);
+        Vector2 terrainHeight = new Vector2(layer.terrainBaseHeight, layer.terrainHeight);
+        HeightNoise(terrainOrigin, cellSize, layer.gridResolution, ref terrainHeight, ref heights, ref dists);
+        // heights.Print();
         SimpleProfiler.End(ph);
 
         if (layer.lodLevel < 3)
@@ -379,24 +378,22 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
         SimpleProfiler.End(ph);
 
         ph = SimpleProfiler.Begin(phc, "Copy Heights");
-        unsafe
-        {
-            var heightsPointerArray = new Array2D<float>(heightsArray);
-            CopyHeights(layer.gridResolution, layer.terrainBaseHeight, layer.terrainHeight, heights, ref heightsPointerArray);
-        }
+
+        var heightsPointerArray = heightsArray.AsSpan();
+        CopyHeights(layer.gridResolution, layer.terrainBaseHeight, layer.terrainHeight, heights.AsReadOnlySpan(), ref heightsPointerArray);
 
         SimpleProfiler.End(ph);
 
         ph = SimpleProfiler.Begin(phc, "Copy Splats");
-        var splatsPointerArray = new Array3D<float>(splatsArray);
-        CopySplats(layer.gridResolution, splats, ref splatsPointerArray);
+        // var splatsPointerArray = new Array3D<float>(splatsArray);
+        // CopySplats(layer.gridResolution, splats, ref splatsPointerArray);
         SimpleProfiler.End(ph);
 
         if (layer.lodLevel < 1)
         {
             ph = SimpleProfiler.Begin(phc, "Generate Details");
-            var detailMapPointerArray = new Array2D<int>(detailMap);
-            GenerateDetails(layer.gridResolution, rand, splats, ref detailMapPointerArray);
+            // var detailMapPointerArray = detailMap.AsSpan();
+            GenerateDetails(layer.gridResolution, rand, splats, ref detailMap);
             SimpleProfiler.End(ph);
         }
 
@@ -407,22 +404,24 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
             new Vector3(index.x * layer.chunkW + posOffset, height, index.y * layer.chunkH + posOffset),
             layer, index
         );
+
         MainThreadActionQueue.Enqueue(action);
     }
 
     // [BurstCompile]
     static void HeightNoise(
-        in DPoint terrainOrigin, in DPoint cellSize, int gridResolution,
-        ref Array2D<float> heights, ref Array2D<Vector3> dists
+        in DPoint terrainOrigin, in DPoint cellSize, int gridResolution, ref Vector2 terrainHeight,
+        ref float[,] heights, ref Vector3[,] dists
     )
     {
-        for (var zRes = 0; zRes <= gridResolution; zRes++)
+        float totalHeight = Mathf.Abs(terrainHeight.X) + terrainHeight.Y;
+        float min = Math.Abs(terrainHeight.X);
+        for (var zRes = 0; zRes < gridResolution; zRes++)
         {
-            for (var xRes = 0; xRes <= gridResolution; xRes++)
+            for (var xRes = 0; xRes < gridResolution; xRes++)
             {
-                DPoint p = terrainOrigin + new Point(xRes, zRes) * cellSize;
-                Vector2 v = (Vector2)p;
-                heights[zRes, xRes] = TerrainNoise.GetNoise2D(v.X, v.Y);
+                var p = (Vector2)(terrainOrigin + new Point(xRes, zRes) * cellSize);
+                heights[zRes, xRes] = LandscapeLayer<L, C>.TerrainNoise.GetNoise2Dv(p) * (totalHeight - min) + min;
                 dists[zRes, xRes] = new Vector3(0f, 0f, 1000f);
             }
         }
@@ -431,7 +430,7 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     // [BurstCompile]
     static void HandleSplats(
         in DPoint terrainOrigin, in DPoint cellSize, int gridResolution,
-        ref Array2D<float> heights, ref Array2D<Vector4> splats
+        ref float[,] heights, ref Vector4[,] splats
     )
     {
         // Skip edges in iteration - we need those for calculating normal only.
@@ -460,7 +459,7 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     }
 
     // [BurstCompile]
-    static void GetNormal(int x, int z, float doubleCellSize, in Array2D<float> heights, out Vector3 normal)
+    static void GetNormal(int x, int z, float doubleCellSize, in float[,] heights, out Vector3 normal)
     {
         normal = new Vector3(
             heights[z, x + 1] - heights[z, x - 1],
@@ -470,39 +469,55 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     }
 
     // [BurstCompile]
-    static void HandleEdges(int fromEdge, float lowerDist, ref Array2D<float> heights)
+    static void HandleEdges(int fromEdge, float lowerDist, ref float[,] heights)
     {
-        for (int i = fromEdge; i < heights.Width - fromEdge; i++)
+        for (int i = fromEdge; i < heights.GetLength(0) - fromEdge; i++) //GetLength(0) was width
         {
             heights[fromEdge, i] -= lowerDist;
             heights[i, fromEdge] -= lowerDist;
-            heights[heights.Width - fromEdge - 1, i] -= lowerDist;
-            heights[i, heights.Width - fromEdge - 1] -= lowerDist;
+            heights[heights.GetLength(0) - fromEdge - 1, i] -= lowerDist;
+            heights[i, heights.GetLength(0) - fromEdge - 1] -= lowerDist;
         }
     }
 
-    // [BurstCompile]
+    // [BurstCompile] <- we don't have burst, but we have native SIMD
     static void CopyHeights(
         int resolution, float terrainBaseHeight, float terrainHeight,
-        in Array2D<float> heights,
-        ref Array2D<float> heightsArray
+        in ReadOnlySpan<float> input,
+        ref Span<float> results
     )
     {
-        float invTerrainHeight = 1f / terrainHeight;
-        for (var zRes = 0; zRes < resolution + 1; zRes++)
+        if (Sse.IsSupported)
         {
-            for (var xRes = 0; xRes < resolution + 1; xRes++)
+            var inverseTerrainHeight = Vector128.CreateScalar(1f / terrainHeight);
+            var resultVectors = MemoryMarshal.Cast<float, Vector128<float>>(results);
+
+            var inputVectors = MemoryMarshal.Cast<float, Vector128<float>>(input);
+            var terrainBaseHeightVec = Vector128.CreateScalar(terrainBaseHeight);
+
+            for (int i = 0; i < inputVectors.Length; i++)
             {
-                heightsArray[zRes, xRes] = (heights[zRes, xRes] - terrainBaseHeight) * invTerrainHeight;
+                resultVectors[i] = inputVectors[i];
+                // resultVectors[i] = Sse.MultiplyScalar(Sse.SubtractScalar(inputVectors[i], terrainBaseHeightVec), inverseTerrainHeight);
             }
         }
+        else
+        {
+            CopyHeightsSlow(resolution, terrainBaseHeight, terrainHeight, input, ref results);
+        }
+    }
+    static void CopyHeightsSlow(int resolution, float terrainBaseHeight, float terrainHeight,
+        in ReadOnlySpan<float> input,
+        ref Span<float> results
+    )
+    {
     }
 
     // [BurstCompile]
     static void CopySplats(
         int resolution,
-        in Array2D<Vector4> splats,
-        ref Array3D<float> splatsArray
+        in Vector4[,] splats,
+        ref float[,,] splatsArray
     )
     {
         for (var zRes = 0; zRes < resolution + 1; zRes++)
@@ -519,8 +534,8 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>, IGodotInstance
     // [BurstCompile]
     static void GenerateDetails(
         int resolution, in RandomHash rand,
-        in Array2D<Vector4> splats,
-        ref Array2D<int> detailMap
+        in Vector4[,] splats,
+        ref int[,] detailMap
     )
     {
         for (int x = GridOffset; x < resolution - GridOffset; x++)
@@ -553,44 +568,63 @@ public abstract class LandscapeLayer<L, C> : ChunkBasedDataLayer<L, C>, IGodotIn
     where L : LandscapeLayer<L, C>, new()
     where C : LandscapeChunk<L, C>, new()
 {
+    public static FastNoiseLite TerrainNoise;
+
     public abstract int lodLevel { get; }
 
     public const int GridResolution = 256;
     public int gridResolution = GridResolution;
-    public int chunkResolution = GridResolution - 8;
+    public int chunkResolution = GridResolution;
     public float terrainBaseHeight = -100;
     public float terrainHeight = 200;
 
-    public Node3D layerParent;
+    public Terrain3D? layerParent;
 
-    public List<Node3D> unusedTerrains = new List<Node3D>();
+    // public List<Node3D> unusedTerrains = new List<Node3D>();
 
     public LandscapeLayer()
     {
-        layerParent = new Node3D { Name = GetType().Name };
         // if (lodLevel < 2)
         // 	AddLayerDependency(new LayerDependency(CultivationLayer.instance, CultivationLayer.requiredPadding, 0));
         // if (lodLevel < 3)
         // 	AddLayerDependency(new LayerDependency(LocationLayer.instance, LocationLayer.requiredPadding, 1));
     }
 
-    public Terrain3D GetTerrainAtWorldPos(Vector3 worldPos)
+    static LandscapeLayer()
     {
-        if (GetChunkOfGridPoint(null,
-                Mathf.FloorToInt(worldPos.X), Mathf.FloorToInt(worldPos.Z),
-                chunkW, chunkH, out C chunk, out Point point)
-           )
-        {
-            return new Terrain3D(chunk.chunkParent.transform?.FindChildren("*", nameof(Terrain3D)).FirstOrDefault());
-        }
+        TerrainNoise = new FastNoiseLite();
+        TerrainNoise.SetNoiseType(FastNoiseLite.NoiseTypeEnum.Perlin);
 
-        return null;
+        TerrainNoise.SetFrequency(0.002f);
+        TerrainNoise.SetFractalLacunarity(2f);
+        TerrainNoise.SetFractalGain(0.5f);
+        TerrainNoise.SetFractalOctaves(6);
+
+        TerrainNoise.SetFractalType(FastNoiseLite.FractalTypeEnum.Fbm);
     }
 
-    public Node LayerRoot() => layerParent;
+    public Terrain3D GetTerrainAtWorldPos(Vector3 worldPos)
+    {
+        return layerParent; //TODO: do some boundary check
+
+        // if (GetChunkOfGridPoint(null,
+        //     Mathf.FloorToInt(worldPos.X), Mathf.FloorToInt(worldPos.Z),
+        //     chunkW, chunkH, out C chunk, out Point point)
+        // )
+        // {
+        //     return new Terrain3D(chunk.chunkParent.transform?.FindChildren("*", nameof(Terrain3D)).FirstOrDefault());
+        // }
+        //
+        // return null;
+    }
+
+    public Node LayerRoot() => layerParent?.Instance as Node3D;
 }
 
-public class LandscapeLayerA : LandscapeLayer<LandscapeLayerA, LandscapeChunkA>
+/// <summary>
+/// Aka Terrain3D base class holder
+/// </summary>
+public class LandscapeLayerTerrain3D : LandscapeLayer<LandscapeLayerTerrain3D, LandscapeChunkTerrain3D>
 {
     public override int lodLevel
     {
@@ -599,81 +633,18 @@ public class LandscapeLayerA : LandscapeLayer<LandscapeLayerA, LandscapeChunkA>
 
     public override int chunkW
     {
-        get { return 124; }
-    } // 128 - 4
+        get { return 1024; }
+    }
 
     public override int chunkH
     {
-        get { return 124; }
+        get { return 1024; }
     }
 }
 
-public class LandscapeLayerB : LandscapeLayer<LandscapeLayerB, LandscapeChunkB>
-{
-    public override int lodLevel
-    {
-        get { return 1; }
-    }
-
-    public override int chunkW
-    {
-        get { return 248; }
-    } // 256 - 8
-
-    public override int chunkH
-    {
-        get { return 248; }
-    }
-}
-
-public class LandscapeLayerC : LandscapeLayer<LandscapeLayerC, LandscapeChunkC>
-{
-    public override int lodLevel
-    {
-        get { return 2; }
-    }
-
-    public override int chunkW
-    {
-        get { return 496; }
-    } // 512 - 16
-
-    public override int chunkH
-    {
-        get { return 496; }
-    }
-}
-
-public class LandscapeLayerD : LandscapeLayer<LandscapeLayerD, LandscapeChunkD>
-{
-    public override int lodLevel
-    {
-        get { return 3; }
-    }
-
-    public override int chunkW
-    {
-        get { return 992; }
-    } // 1024 - 32
-
-    public override int chunkH
-    {
-        get { return 992; }
-    }
-}
-
-public class LandscapeChunkA : LandscapeChunk<LandscapeLayerA, LandscapeChunkA>
-{
-}
-
-public class LandscapeChunkB : LandscapeChunk<LandscapeLayerB, LandscapeChunkB>
-{
-}
-
-public class LandscapeChunkC : LandscapeChunk<LandscapeLayerC, LandscapeChunkC>
-{
-}
-
-public class LandscapeChunkD : LandscapeChunk<LandscapeLayerD, LandscapeChunkD>
+/// <summary>
+/// aka wrapper for Terrain3DStorage.Regions
+/// </summary>
+public class LandscapeChunkTerrain3D : LandscapeChunk<LandscapeLayerTerrain3D, LandscapeChunkTerrain3D>
 {
 }

@@ -3,22 +3,17 @@ using Terrain3DBindings;
 
 [Tool]
 [GlobalClass]
-public partial class TerrainResources : SingletonAsset<TerrainResources> {
-	[Export]
-	public Texture2D grassTex;
-	[Export]
-	public Texture2D cliffTex;
-	[Export]
-	public Texture2D pathTex;
-	[Export]
-	public Texture2D grassDetail;
+public partial class TerrainResources : SingletonAsset<TerrainResources>
+{
 
-	[ExportCategory("Material")]
-	[Export]
-	public Resource material;
-	[Export]
-	private Resource terrainData;
+	[Export(PropertyHint.ResourceType, nameof(Terrain3DMaterial))]
+	protected Resource material;
+	[Export(PropertyHint.ResourceType, nameof(Terrain3DStorage))]
+	protected Resource terrainData;
+	[Export(PropertyHint.ResourceType, nameof(Terrain3DTextureList))]
+	protected Resource textureList;
 	
 	public Terrain3DMaterial Material => new(material);
 	public Terrain3DStorage TerrainData => new(terrainData);
+	public Terrain3DTextureList TextureList => new(textureList);
 }

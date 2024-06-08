@@ -4,6 +4,7 @@
 /// </summary>
 
 using Godot;
+using Godot.Collections;
 using System;
 
 namespace Terrain3DBindings
@@ -36,10 +37,11 @@ namespace Terrain3DBindings
         private const string STORAGE_PROPERTY_NAME = "storage";
         private const string TERRAINLAYERS_PROPERTY_NAME = "texture_list";
         private const string MATERIAL_PROPERTY_NAME = "material";
+        private const string MESHLODS_PROPERTY_NAME = "mesh_lods";
 
-        private Terrain3DStorage _storage;
-        private Terrain3DTextureList _textureList;
-        private Terrain3DMaterial _material;
+        private Terrain3DStorage? _storage;
+        private Terrain3DTextureList? _textureList;
+        private Terrain3DMaterial? _material;
 
         private Node3D _asNode3D => Instance as Node3D;
 
@@ -85,13 +87,27 @@ namespace Terrain3DBindings
             set => Instance.Set(MATERIAL_PROPERTY_NAME, value.Instance); //TODO: maybe cleanup the old one
         }
 
+        public int mesh_lods
+        {
+            get => Instance.Get(MESHLODS_PROPERTY_NAME).AsInt32();
+            set => Instance.Set(MESHLODS_PROPERTY_NAME, value);
+        }
+
         public Terrain3D(GodotObject _instance) : base(_instance)
         {
         }
-
+        
         public Terrain3D() : base(ClassDB.Instantiate(nameof(Terrain3D)).AsGodotObject())
         {
         }
+    }
+
+    public enum MapType
+    {
+        TYPE_HEIGHT = 0,
+        TYPE_CONTROL = 1,
+        TYPE_COLOR = 2,
+        TYPE_MAX = 3,
     }
 
     public enum HeightFilter
@@ -99,7 +115,7 @@ namespace Terrain3DBindings
         HEIGHT_FILTER_NEAREST = 0,
         HEIGHT_FILTER_MINIMUM = 1
     }
-    
+
     public enum RegionSize
     {
         SIZE_1024 = 1024
@@ -108,6 +124,14 @@ namespace Terrain3DBindings
     public class Terrain3DStorage : _Terrain3DInstanceWrapper_
     {
         private const string REGIONSIZE_PROPERTY_NAME = "region_size";
+        private const string HEIGHTRANGE_PROPERTY_NAME = "height_range";
+        private const string COLORMAPS_PROPERTY_NAME = "color_maps";
+        private const string REGIONOFFSETS_PROPERTY_NAME = "region_offsets";
+        private const string CONTROLMAPS_PROPERTY_NAME = "control_maps";
+        private const string HEIGHTMAPS_PROPERTY_NAME = "height_maps";
+        private const string SETHEIGHT_FUNCTION_NAME = "set_height";
+        private const string FORCE_UPDATE_MAPS_FUNCTION_NAME = "force_update_maps";
+
         private Resource _asResource => Instance as Resource;
 
         public RegionSize RegionSize
@@ -116,9 +140,50 @@ namespace Terrain3DBindings
             set => _asResource.Set(REGIONSIZE_PROPERTY_NAME, (int)value);
         }
 
+        public Vector2 HeightRange
+        {
+            get => _asResource.Get(HEIGHTRANGE_PROPERTY_NAME).AsVector2();
+            set => _asResource.Set(HEIGHTRANGE_PROPERTY_NAME, value);
+        }
+
+        public Array<Image> ColorMaps
+        {
+            get => _asResource.Get(COLORMAPS_PROPERTY_NAME).AsGodotArray<Image>();
+            set => _asResource.Set(COLORMAPS_PROPERTY_NAME, value);
+        }
+
+        public Array<Image> ControlMaps
+        {
+            get => _asResource.Get(CONTROLMAPS_PROPERTY_NAME).AsGodotArray<Image>();
+            set => _asResource.Set(CONTROLMAPS_PROPERTY_NAME, value);
+        }
+
+        public Array<Image> HeightMaps
+        {
+            get => _asResource.Get(HEIGHTMAPS_PROPERTY_NAME).AsGodotArray<Image>();
+            set => _asResource.Set(HEIGHTMAPS_PROPERTY_NAME, value);
+        }
+
+        public Array<Vector2I> RegionOffsets
+        {
+            get => _asResource.Get(REGIONOFFSETS_PROPERTY_NAME).AsGodotArray<Vector2I>();
+            set => _asResource.Set(REGIONOFFSETS_PROPERTY_NAME, value);
+        }
+
         public Terrain3DStorage(GodotObject _instance) : base(_instance)
         {
         }
+
+        public void SetHeight(Vector3 globalPosition, float height)
+        {
+            _asResource.Call(SETHEIGHT_FUNCTION_NAME, globalPosition, height);
+        }
+
+        public void ForceUpdateMaps(MapType mapType)
+        {
+            _asResource.Call(FORCE_UPDATE_MAPS_FUNCTION_NAME, (int)mapType);
+        }
+
     }
 
     public class Terrain3DTexture : _Terrain3DInstanceWrapper_
@@ -161,7 +226,7 @@ namespace Terrain3DBindings
         {
             Instance.Call("set_texture", index, texture.Instance);
         }
-        
+
     }
 
     public class Terrain3DMaterial : _Terrain3DInstanceWrapper_
