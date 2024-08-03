@@ -22,13 +22,10 @@ public class GeoGridChunk : LayerChunk<GeoGridLayer, GeoGridChunk>, IDisposable
 
     public GeoGridChunk()
     {
-        unsafe
-        {
-            heights = new float[layer.gridChunkRes.y, layer.gridChunkRes.x];
-            dists = new Vector3[layer.gridChunkRes.y, layer.gridChunkRes.x];
-            controls = new uint[layer.gridChunkRes.y, layer.gridChunkRes.x];
-            // LayerManager.instance.abort += Dispose;
-        }
+        heights = new float[layer.gridChunkRes.y, layer.gridChunkRes.x];
+        dists = new Vector3[layer.gridChunkRes.y, layer.gridChunkRes.x];
+        controls = new uint[layer.gridChunkRes.y, layer.gridChunkRes.x];
+        // LayerManager.instance.abort += Dispose;
     }
 
     public void Dispose()

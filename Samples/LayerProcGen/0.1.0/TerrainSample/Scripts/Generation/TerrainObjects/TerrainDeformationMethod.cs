@@ -2,7 +2,8 @@
 using Godot.Collections;
 using Runevision.Common;
 using System;
-using Terrain3D.Scripts.Utilities;
+using Terrain3DDemo.Scripts.Utilities;
+using Terrain3DExtensions;
 
 class TerrainDeformationMethod {
 
@@ -71,6 +72,11 @@ class TerrainDeformationMethod {
 		float control = Mathf.Clamp(inverselerp(props.Z + 0.0f, props.Z - 0.5f, dist),0,1);
 
 		// Output weight, influence, height, control.
+		// if (influence > .1)
+		// {
+		// 	GD.Print("bra");
+		// }
+
 		return new Vector4(weight, influence * weight, height * weight, control);
 	}
 
@@ -124,13 +130,14 @@ class TerrainDeformationMethod {
 				float influence = col.Y / col.X;
 				control /= col.X;
 
-				if (influence > 0) {
+				if (influence > 0)
+				{
 					heights[(int)index] = Mathf.Lerp(heights[(int)index], height, influence);
 					controls[(int)index].SetBaseTextureId(1);
 					controls[(int)index].SetOverlayTextureId(2);
-					var blend = Mathf.Clamp(col.W, 0f, 1f);
+					var blend = Mathf.Lerp(controls[(int)index].GetTextureBlend(), control.Z, Mathf.Clamp(col.W, 0f, 1f));
 					controls[(int)index].SetTextureBlend(Convert.ToByte(blend * 255f));
-					controls[(int)index].SetAutoshaded(false);
+					controls[(int)index].SetAutoshaded(influence < .5);
 					controls[(int)index].SetNavigation(blend > .95f);
 				}
 			}

@@ -156,14 +156,18 @@ public class CultivationChunk : LayerChunk<CultivationLayer, CultivationChunk> {
 		return new Vector3((float)p.x, heightFunction(p), (float)p.y);
 	}
 
-	public void DebugDraw(float drawPaths, float drawOrigPaths, float drawPathBounds) {
+	public void DebugDraw(float drawPaths, float drawOrigPaths, float drawPathBounds)
+	{
+		DebugDraw3DScopeConfig config = DebugDraw3D.NewScopedConfig().SetThickness(0.25f).SetNoDepthTest(true);
 		for (int p = 0; p < paths.Count; p++) {
 			PathSpec path = paths[p];
 			path.DebugDraw(drawPaths, drawOrigPaths, drawPathBounds);
 		}
+		config.Dispose();
 	}
 
 	public void DrawHeights(GridBounds bounds) {
+		DebugDraw3DScopeConfig config = DebugDraw3D.NewScopedConfig().SetThickness(0.25f).SetNoDepthTest(true);
 		int d = TerrainPathFinder.halfCellSize;
 		Point o = layer.gridPadding;
 		for (int i = 0; i < layer.gridChunkRes.x; i++) {
@@ -182,6 +186,7 @@ public class CultivationChunk : LayerChunk<CultivationLayer, CultivationChunk> {
 					Colors.White);
 			}
 		}
+		config.Dispose();
 	}
 
 	public void DrawDirections(GridBounds bounds) {

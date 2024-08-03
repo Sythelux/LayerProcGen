@@ -1,120 +1,46 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
+using GDExtension.Wrappers;
 using Godot;
 using Godot.Collections;
 using Godot.Util;
 using Runevision.Common;
 using Runevision.LayerProcGen;
-using Terrain3DBindings;
-using Terrain3D.Scripts.Generation.Layers;
-using Terrain3D.Scripts.Utilities;
+using Terrain3DDemo.Scripts.Generation.Layers;
+using Terrain3DDemo.Scripts.Utilities;
+using Terrain3DExtensions;
 
 public struct MapQueuedTerrainCallback<L, C> : IQueuedAction
-    where L : LandscapeLayer<L, C>, new()
-    where C : LandscapeChunk<L, C>, new()
-{
-    public float[,] heightmap;
-    public uint[,] controlmap;
-    public int[,] detailMap;
-    public MeshInstance3D[] treeInstances; //there is no TreeInstance in Godot, but we can use Meshinstance, should be as powerful
-    public L layer;
-    public Point index;
-    private readonly int regionSize;
-
-    public MapQueuedTerrainCallback(
-        float[,] heightmap,
-        uint[,] controlmap,
-        int[,] detailMap,
-        MeshInstance3D[] treeInstances,
-        L layer,
-        Point index
-    )
-    {
-        this.heightmap = heightmap;
-        this.controlmap = controlmap;
-        this.detailMap = detailMap;
-        this.treeInstances = treeInstances;
-        this.layer = layer;
-        this.index = index;
-        regionSize = (int)RegionSize.SIZE_1024;
-    }
-
-    static Terrain3DRegion? GetOrCreateTerrain(Vector3 position, L layer)
-    {
-        if (!TerrainLODManager.instance.HasChunkAt(position))
-            TerrainLODManager.instance.CreateNewChunkAt(position);
-        var chunk = TerrainLODManager.instance.GetChunkAt(position);
-        return chunk.LoD < layer.lodLevel ? null : chunk;
-    }
-
-    public void Process()
-    {
-        LayerManagerBehavior.instance.StartCoroutine(ProcessRoutine());
-    }
-
-    public IEnumerator ProcessRoutine()
-    {
-        var startPos = index * layer.chunkW;
-        Terrain3DRegion? terrain = GetOrCreateTerrain(new Vector3(startPos.x, 0, startPos.y), layer);
-        if (terrain == null)
-            yield break;
-
-        terrain.HeightMap ??= Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rf);
-        terrain.ControlMap ??= Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rf);
-        DPoint cellSize = (DPoint)layer.chunkSize / layer.gridResolution;
-        float minHeight = layer.terrainBaseHeight;
-        float totalHeight = layer.terrainHeight - layer.terrainBaseHeight;
-        // TerrainLODManager.instance.terrain3D.Storage.HeightRange = new Vector2(minHeight, layer.terrainHeight);
-
-        GD.Print($"HandleUnderSizedRegions: {cellSize}, {layer.chunkSize}, {layer.gridResolution}");
-        // GD.Print($"\t: {layer.lodLevel} {position} in region:{terrain.RegionOffset}, {startPos}; on index:{index}, {index * layer.chunkW}");
-        for (var x = 0; x < layer.chunkSize.x; x++)
-        {
-            for (var z = 0; z < layer.chunkSize.y; z++)
-            {
-                Vector3 globalPosition = new Vector3(startPos.x + x, 0, startPos.y + z);
-                TerrainLODManager.instance.terrain3DWrapper.Storage.SetHeight(globalPosition, heightmap[(int)(z / cellSize.y), (int)(x / cellSize.x)]);
-                TerrainLODManager.instance.terrain3DWrapper.Storage.SetControl(globalPosition, controlmap[(int)(z / cellSize.y), (int)(x / cellSize.x)]);
-            }
-        }
-
-        TerrainLODManager.instance.terrain3DWrapper.Storage.ForceUpdateMaps();
-        yield return null;
-    }
-}
-
-public struct ImgQueuedTerrainCallback<L, C> : IQueuedAction
     where L : LandscapeLayer<L, C>, new()
     where C : LandscapeChunk<L, C>, new()
 {
     public Image heightmap;
     public Image detailMap;
     public MeshInstance3D[] treeInstances; //there is no TreeInstance in Godot, but we can use Meshinstance, should be as powerful
+    private readonly List<Transform3D> grassTransforms;
     public L layer;
     public Point index;
-    private Point startPos;
+    readonly DPoint terrainOrigin;
+    private readonly int regionSize;
 
-    public ImgQueuedTerrainCallback(
-        Image heightmap,
+    public MapQueuedTerrainCallback(Image heightmap,
         Image detailMap,
         MeshInstance3D[] treeInstances,
+        List<Transform3D> grassTransforms,
         L layer,
-        Point startPos,
-        Point index
+        Point index,
+        DPoint terrainOrigin
     )
     {
         this.heightmap = heightmap;
         this.detailMap = detailMap;
         this.treeInstances = treeInstances;
+        this.grassTransforms = grassTransforms;
         this.layer = layer;
-        this.startPos = startPos;
         this.index = index;
+        this.terrainOrigin = terrainOrigin;
+        regionSize = (int)Terrain3DStorage.RegionSizeEnum.Size1024;
     }
 
     static Terrain3DRegion? GetOrCreateTerrain(Vector3 position, L layer)
@@ -132,21 +58,46 @@ public struct ImgQueuedTerrainCallback<L, C> : IQueuedAction
 
     public IEnumerator ProcessRoutine()
     {
+        var storage = TerrainLODManager.instance.Terrain3D.Storage;
+        var instancer = TerrainLODManager.instance.Terrain3D.Instancer;
+        var startPos = index * layer.chunkW;
         Terrain3DRegion? terrain = GetOrCreateTerrain(new Vector3(startPos.x, 0, startPos.y), layer);
-        if (terrain == null)
+        if (terrain?.HeightMap == null)
             yield break;
-        terrain.HeightMap = heightmap;
-        // terrain.ControlMap = controlmap; // leave it to autoshading on that resolution
+        startPos.x = (startPos.x + regionSize) % regionSize;
+        startPos.y = (startPos.y + regionSize) % regionSize;
+        // Terrain3DRegion? terrain = GetOrCreateTerrain(new Vector3(startPos.x, 0, startPos.y), layer);
+        // if (terrain == null)
+        //     yield break;
 
-        if (layer.lodLevel == 0)
-        {
-            // terrain.ColorMap = ColorMap;
-        }
+        terrain.HeightMap ??= Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rf);
+        terrain.ControlMap ??= Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rf);
+        DPoint cellMultiplier = (DPoint)layer.chunkSize / layer.gridResolution; // 128/256
+        // float minHeight = layer.terrainBaseHeight;
+        // float totalHeight = layer.terrainHeight - layer.terrainBaseHeight;
+        // TerrainLODManager.instance.terrain3D.Storage.HeightRange = new Vector2(minHeight, layer.terrainHeight);
+        if (grassTransforms != null)
+            instancer?.AddTransforms(TerrainLODManager.instance.Terrain3D.Assets.MeshList[0].Id, new Array<Transform3D>(grassTransforms), new Array<Color>());
 
-        // if (treeInstances != null)
-        //     terrain.treeInstances = treeInstances;
+        // GD.Print($"HandleUnderSizedRegions: {cellMultiplier}, {layer.chunkSize}, {layer.gridResolution}, {startPos}");
+        // GD.Print($"\t: {layer.lodLevel} {position} in region:{terrain.RegionOffset}, {startPos}; on index:{index}, {index * layer.chunkW}");
 
-        TerrainLODManager.instance.terrain3DWrapper.Storage.ForceUpdateMaps();
+        terrain.HeightMap.BlitRect(heightmap, new Rect2I(0, 0, heightmap.GetWidth(), heightmap.GetHeight()), new Vector2I(startPos.x, startPos.y));
+
+        // for (var x = 0; x < layer.chunkSize.x; x++)
+        // {
+        //     for (var z = 0; z < layer.chunkSize.y; z++)
+        //     {
+        //         var globalPosition = new Vector3(startPos.x + x, 0, startPos.y + z);
+        //         // storage.SetHeight(globalPosition, heightmap.GetPixel(z, x).R);
+        //         storage.SetControl(globalPosition, (int)controlmap[(int)(z / cellMultiplier.y), (int)(x / cellMultiplier.x)]);
+        //     }
+        //
+        //     yield return null;
+        //     // TerrainLODManager.instance.Terrain3D.Storage.ForceUpdateMaps((int)Terrain3DStorage.MapType.TypeMax);
+        // }
+
+        storage.ForceUpdateMaps((int)Terrain3DStorage.MapType.TypeMax);
         yield return null;
     }
 }
@@ -161,6 +112,7 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>
     protected float[,] heights;
     public uint[,] controls;
     public Vector3[,] dists;
+    private List<Transform3D> grassTransforms;
 
     const int GridOffset = 4;
 
@@ -188,132 +140,155 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>
 
     private void Build()
     {
-        SimpleProfiler.ProfilerHandle ph;
-
-        DPoint cellSize = (DPoint)layer.chunkSize / layer.chunkResolution;
-        DPoint terrainOrigin = index * layer.chunkSize - cellSize * GridOffset;
-
-        ph = SimpleProfiler.Begin(phc, "Height Noise");
-        float height = layer.terrainBaseHeight;
-        HeightNoise(terrainOrigin, cellSize, layer.gridResolution, ref heights, ref dists, layer.terrainHeight, height);
-        SimpleProfiler.End(ph);
-
-        ControlBase(ref controls);
-
-        if (layer.lodLevel < 3)
+        try
         {
-            // Apply deformation from locations.
-            ph = SimpleProfiler.Begin(phc, "Deform-Locations");
-            List<LocationSpec> locationSpecs = locationSpecListPool.Get();
-            LocationLayer.instance.GetLocationSpecsOverlappingBounds(this, locationSpecs, bounds);
-            TerrainDeformation.ApplySpecs(
-                ref heights, ref dists, ref controls,
-                index * layer.chunkResolution - Point.one * GridOffset,
-                Point.one * (layer.gridResolution),
-                ((Vector2)layer.chunkSize) / layer.chunkResolution,
-                locationSpecs,
-                (SpecPointB p) =>
-                {
-                    p.centerElevation = 0;
-                    return p;
-                });
-            locationSpecListPool.Return(ref locationSpecs);
+            SimpleProfiler.ProfilerHandle ph;
+
+            //e.g. chunkSize: 512, gridRes/img: 256, regionSize: 1024
+
+            DPoint cellMultiplier = (DPoint)layer.chunkSize / layer.gridResolution;
+            var regionSize = (int)Terrain3DStorage.RegionSizeEnum.Size1024;
+            DPoint regionFactor = (DPoint)layer.chunkSize / regionSize;
+            DPoint terrainOrigin = index * layer.chunkSize /*- cellMultiplier * GridOffset*/;
+
+            // GD.Print("index: ", index, ",\tchunkSize: ", layer.chunkSize, ",\tgridRes/img: ", layer.gridResolution, ", regionSize: ", regionSize, ", cm: ", cellMultiplier, ",\trf: ", regionFactor, ",\two: ", worldOffset, ",\t\tb: ", bounds);
+
+            ph = SimpleProfiler.Begin(phc, "Base Noise");
+            // float height = layer.terrainBaseHeight;
+            BaseNoise(terrainOrigin, cellMultiplier, layer.gridResolution, ref heights, ref dists, ref controls);
             SimpleProfiler.End(ph);
 
-            if (layer.lodLevel < 2)
+            if (layer.lodLevel < 3)
             {
-                // Apply deformation from paths.
-                ph = SimpleProfiler.Begin(phc, "Deform-Paths");
-                List<PathSpec> pathSpecs = pathSpecListPool.Get();
-                CultivationLayer.instance.GetPathsOverlappingBounds(this, pathSpecs, bounds);
+                // Apply deformation from locations.
+                ph = SimpleProfiler.Begin(phc, "Deform-Locations");
+                List<LocationSpec> locationSpecs = locationSpecListPool.Get();
+                LocationLayer.instance.GetLocationSpecsOverlappingBounds(this, locationSpecs, bounds);
                 TerrainDeformation.ApplySpecs(
                     ref heights, ref dists, ref controls,
-                    index * layer.chunkResolution - Point.one * GridOffset,
+                    index * layer.gridResolution - Point.one * GridOffset,
                     Point.one * (layer.gridResolution),
-                    ((Vector2)layer.chunkSize) / layer.chunkResolution,
-                    pathSpecs);
-                pathSpecListPool.Return(ref pathSpecs);
+                    ((Vector2)layer.chunkSize) / layer.gridResolution,
+                    locationSpecs,
+                    (SpecPointB p) =>
+                    {
+                        p.centerElevation = 0;
+                        return p;
+                    });
+                locationSpecListPool.Return(ref locationSpecs);
+                SimpleProfiler.End(ph);
+
+                if (layer.lodLevel < 2)
+                {
+                    // Apply deformation from paths.
+                    ph = SimpleProfiler.Begin(phc, "Deform-Paths");
+                    List<PathSpec> pathSpecs = pathSpecListPool.Get();
+                    CultivationLayer.instance.GetPathsOverlappingBounds(this, pathSpecs, bounds);
+                    TerrainDeformation.ApplySpecs(
+                        ref heights, ref dists, ref controls,
+                        index * layer.gridResolution - Point.one * GridOffset,
+                        Point.one * (layer.gridResolution),
+                        ((Vector2)layer.chunkSize) / layer.gridResolution,
+                        pathSpecs);
+                    pathSpecListPool.Return(ref pathSpecs);
+                    SimpleProfiler.End(ph);
+                }
+            }
+
+            RandomHash rand = new RandomHash(123);
+
+            ph = SimpleProfiler.Begin(phc, "Splat Noise (GetNormal)");
+            HandleControls(terrainOrigin, cellMultiplier, layer.gridResolution, ref heights, ref controls);
+            SimpleProfiler.End(ph);
+
+            if (layer.lodLevel < 1)
+            {
+                ph = SimpleProfiler.Begin(phc, "Generate Details");
+                // var detailMapPointerArray = detailMap.AsSpan();
+                var grassDetail = new DetailPrototype
+                {
+                    Color = new Color(0.9f, 1.0f, 1.1f),
+                    MinHeight = 0.3f,
+                    MaxHeight = 0.6f,
+                    MinWidth = 0.4f,
+                    MaxWidth = 0.7f
+                };
+                List<Transform3D> grass = new List<Transform3D>();
+                GenerateDetails(terrainOrigin, grassDetail, layer.chunkSize, rand, ref heights, ref controls, ref grass);
+                grassTransforms = grass;
                 SimpleProfiler.End(ph);
             }
-        }
 
-        RandomHash rand = new RandomHash(123);
 
-        ph = SimpleProfiler.Begin(phc, "Splat Noise (GetNormal)");
-        HandleControls(terrainOrigin, cellSize, layer.gridResolution, ref heights, ref controls);
-        SimpleProfiler.End(ph);
-
-        if (layer.lodLevel < 1)
-        {
-            ph = SimpleProfiler.Begin(phc, "Generate Details");
-            // var detailMapPointerArray = detailMap.AsSpan();
-            GenerateDetails(layer.gridResolution, rand, ref controls);
-            SimpleProfiler.End(ph);
-        }
-
-        IQueuedAction action;
-        if (layer.chunkW < (int)RegionSize.SIZE_1024)
-        {
-            action = new MapQueuedTerrainCallback<L, C>(
-                heights, controls, null, null,
-                layer, index
-            );
-            MainThreadActionQueue.Enqueue(action);
-        }
-        else
-        {
-            var regionSize = (int)RegionSize.SIZE_1024;
+            IQueuedAction action;
 
             var subRegionSize = new Point(layer.chunkW / regionSize, layer.chunkH / regionSize);
 
-            for (int i = 0; i < subRegionSize.x; i++)
-            for (int j = 0; j < subRegionSize.y; j++)
+            if (regionFactor.x < 1)
             {
-                var subIndex = new Point(i, j);
-                var baseStartPos = index * layer.chunkW;
-                var subStartPos = subIndex * regionSize;
-                var startPos = baseStartPos + subStartPos;
-                GD.Print($"HandleOverSizedRegions: {cellSize}, {subIndex} {layer.chunkSize}, {startPos}");
-
-
-                var heightImg = Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rf);
+                var heightImg = Image.CreateEmpty((int)(layer.chunkSize.x / cellMultiplier.x), (int)(layer.chunkSize.y / cellMultiplier.y), false, Image.Format.Rf);
                 var detailImg = Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rgb8);
 
-                CopyHeights(subIndex, subRegionSize, regionSize, layer, ref heights, ref heightImg);
+                // CopyHeights(cellMultiplier, baseStartPos, new Point(1, 1), regionSize, layer, ref heights, ref heightImg);
+                // CopyHeights(cellMultiplier, ref heights, ref heightImg);
+                CopyHeights(new Point(1, 1), subRegionSize, ref heights, ref heightImg);
 
-                // CopyControls(layer.gridResolution, ref controls, ref controlImg);
+                // GD.Print($"HandleUnderSizedRegions: {heightImg.GetSize()}, {layer.chunkSize}");
+                heightImg.Resize(layer.chunkSize.x, layer.chunkSize.y, Image.Interpolation.Cubic);
+                detailImg.Resize(layer.chunkSize.x, layer.chunkSize.y, Image.Interpolation.Cubic);
 
-                action = new ImgQueuedTerrainCallback<L, C>(
-                    heightImg, detailImg, null,
-                    layer, startPos, index
+                action = new MapQueuedTerrainCallback<L, C>(
+                    heightImg, detailImg, null, grassTransforms,
+                    layer, index, terrainOrigin
                 );
                 MainThreadActionQueue.Enqueue(action);
             }
-        }
-    }
-
-    private void ControlBase(ref uint[,] controlMap)
-    {
-        for (var z = 0; z < controlMap.GetLength(0); z++)
-        for (var x = 0; x < controlMap.GetLength(1); x++)
-        {
-            controlMap[z, x].SetAutoshaded(true);
-        }
-    }
-
-    private static void CopyHeights(Point subIndex, Point subRegionSize, int regionSize, L layer, ref float[,] heights, ref Image img)
-    {
-        var offW = subIndex.x * heights.GetLength(0) / subRegionSize.x;
-        var offD = subIndex.y * heights.GetLength(1) / subRegionSize.y;
-        var difW = layer.chunkW / heights.GetLength(0);
-        var difD = layer.chunkH / heights.GetLength(1);
-        for (var x = 0; x < regionSize; x++)
-        {
-            for (var z = 0; z < regionSize; z++)
+            else
             {
-                img.SetPixel(x, z, Colors.Red * (heights[z / difW + offD, x / difD + offW]));
+                for (int i = 0; i < subRegionSize.x; i++)
+                for (int j = 0; j < subRegionSize.y; j++)
+                {
+                    var subIndex = new Point(i, j);
+                    // var baseStartPos = index * layer.chunkW;
+                    // var subStartPos = subIndex * regionSize;
+                    // var startPos = baseStartPos + subStartPos;
+
+                    var heightImg = Image.CreateEmpty((int)(layer.chunkSize.x / cellMultiplier.x), (int)(layer.chunkSize.y / cellMultiplier.y), false, Image.Format.Rf);
+                    var detailImg = Image.CreateEmpty(regionSize, regionSize, false, Image.Format.Rgb8);
+
+                    CopyHeights(subIndex, subRegionSize, ref heights, ref heightImg);
+
+                    // GD.Print($"HandleOverSizedRegions: {subIndex}, {heightImg.GetSize()}, ({regionSize},{regionSize})");
+                    heightImg.Resize(regionSize, regionSize, Image.Interpolation.Cubic);
+
+                    // CopyControls(layer.gridResolution, ref controls, ref controlImg);
+
+                    action = new MapQueuedTerrainCallback<L, C>(
+                        heightImg, detailImg, null, grassTransforms,
+                        layer, index, terrainOrigin
+                    );
+
+                    // action = new ImgQueuedTerrainCallback<L, C>(
+                    //     heightImg, detailImg, null, grassTransforms,
+                    //     layer, startPos, index
+                    // );
+                    MainThreadActionQueue.Enqueue(action);
+                }
             }
         }
+        catch (Exception e)
+        {
+            GD.PushError(e);
+        }
+    }
+
+    private static void CopyHeights(Point subIndex, Point subRegionSize, ref float[,] heights, ref Image img)
+    {
+        int offW = subIndex.x * heights.GetLength(0) * subRegionSize.x;
+        int offD = subIndex.y * heights.GetLength(1) * subRegionSize.y;
+        for (int x = 0; x < img.GetWidth(); x++)
+        for (int z = 0; z < img.GetHeight(); z++)
+            img.SetPixel(x, z, Colors.Red * heights[z + offD, x + offW]);
     }
 
     static void CopyControls(
@@ -352,15 +327,39 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>
                 yield return b;
     }
 
-    static void GenerateDetails(
-        int resolution, in RandomHash rand,
-        ref uint[,] controls
-    )
+    /// <summary>
+    /// Terrain3D in Godot has Automapping, so this wouldn't be nescessary, but to place the gras instances, we still need it.
+    /// </summary>
+    /// <param name="terrainOrigin"></param>
+    /// <param name="grassDetail"></param>
+    /// <param name="resolution"></param>
+    /// <param name="rand"></param>
+    /// <param name="heights"></param>
+    /// <param name="controls"></param>
+    /// <param name="grass"></param>
+    private static void GenerateDetails(DPoint terrainOrigin, DetailPrototype grassDetail, Point resolution, RandomHash rand, ref float[,] heights, ref uint[,] controls, ref List<Transform3D> grass)
     {
-        for (int x = GridOffset; x < resolution - GridOffset; x++)
+        var heightMapMultiplier = new Vector2I(heights.GetLength(0) / resolution.y, heights.GetLength(1) / resolution.x);
+        const byte threshold = (byte)(255 * 0.65);
+        for (int x = GridOffset; x < resolution.x - GridOffset; x++)
         {
-            for (int z = GridOffset; z < resolution - GridOffset; z++)
+            for (int z = GridOffset; z < resolution.y - GridOffset; z++)
             {
+                // if (controls[x, z].GetTextureBlend() < threshold)
+                // {
+                for (int i = 0; i < 100; i++)
+                {
+                    var t = Transform3D.Identity;
+                    t = t.Rotated(Vector3.Up, rand.Range(0, Mathf.Pi * 2f, x + z + i));
+                    var width = rand.Range(grassDetail.MinWidth, grassDetail.MaxWidth, x + z + i);
+                    t = t.Scaled(new Vector3(width, rand.Range(grassDetail.MinHeight, grassDetail.MaxHeight, x + z + i), width));
+                    t.Origin = new Vector3((float)(terrainOrigin.x + x + (rand.Value(x + i) * 2 - 1)), 0, (float)(terrainOrigin.y + z + (rand.Value(z + i) * 2 - 1)));
+                    t.Origin.Y = heights[z * heightMapMultiplier.Y, x * heightMapMultiplier.X];
+                    // GD.Print(t.Origin);
+                    grass.Add(t);
+                    // }
+                }
+
                 //TODO: splatmapping
                 // uint controlsAvg = 0.25f * (controls[z, x] + controls[z + 1, x] + controls[z, x + 1] + controls[z + 1, x + 1]);
                 // float grassControlAvg = controlsAvg.X;
@@ -381,18 +380,23 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>
         }
     }
 
-    static void HeightNoise(in DPoint terrainOrigin, in DPoint cellSize, int gridResolution,
-        ref float[,] heights, ref Vector3[,] dists, float terrainHeight, float terrainBaseHeight)
+    static void BaseNoise(
+        in DPoint terrainOrigin,
+        in DPoint cellSize,
+        int gridResolution,
+        ref float[,] heights,
+        ref Vector3[,] dists,
+        ref uint[,] controls
+    )
     {
-        var inverseTerrainHeight = 1f / terrainHeight;
-
         for (var zRes = 0; zRes < gridResolution; zRes++)
         {
             for (var xRes = 0; xRes < gridResolution; xRes++)
             {
                 var p = (Vector2)(terrainOrigin + new Point(xRes, zRes) * cellSize);
                 heights[zRes, xRes] = TerrainNoise.GetHeight(p);
-                // dists[zRes, xRes] = new Vector3(0f, 0f, 1000f);
+                dists[zRes, xRes] = new Vector3(0f, 0f, 1000f);
+                controls[zRes, xRes].SetAutoshaded(false);
             }
         }
     }
@@ -414,8 +418,13 @@ public abstract class LandscapeChunk<L, C> : LayerChunk<L, C>
                 GetNormal(xRes, zRes, doubleCellSize, heights, out Vector3 normal);
 
                 // Handle grass vs cliff based on steepness.
-                float cliff = normal.Y < 0.65f ? 1f : 0f;
-                Vector4 terrainControl = new Vector4(1f - cliff, cliff, 0f, 0f);
+                current.SetBaseTextureId(0);
+                current.SetOverlayTextureId(1);
+                // GD.Print(normal.Y * 255);
+                current.SetTextureBlend(Convert.ToByte(normal.Y * 255));
+
+                // float cliff = normal.Y < 0.65f ? 1f : 0f;
+                // Vector4 terrainControl = new Vector4(1f - cliff, cliff, 0f, 0f);
 
                 // Reduce path control where there's cliff control.
                 // current.Z = Mathf.Min(current.Z, 1f - cliff);
@@ -458,7 +467,7 @@ public abstract class LandscapeLayer<L, C> : ChunkBasedDataLayer<L, C>
 
     public const int GridResolution = 256;
     public int gridResolution = GridResolution;
-    public int chunkResolution = GridResolution - 8;
+    // public int chunkResolution = GridResolution - 8;
     public float terrainBaseHeight = -100;
     public float terrainHeight = 200;
 
@@ -475,7 +484,7 @@ public abstract class LandscapeLayer<L, C> : ChunkBasedDataLayer<L, C>
     // {
     //     return layerParent != null &&
     //            layerParent.Storage.HasRegion(worldPos)
-    //         ? layerParent.Storage.GetMapRegion(MapType.TYPE_HEIGHT, layerParent.Storage.GetRegionIndex(worldPos))
+    //         ? layerParent.Storage.GetMapRegion(MapType.Height, layerParent.Storage.GetRegionIndex(worldPos))
     //         : new Image();
     // }
     //
@@ -499,26 +508,26 @@ public abstract class LandscapeLayer<L, C> : ChunkBasedDataLayer<L, C>
 //@formatter:off
 public class LandscapeLayerA : LandscapeLayer<LandscapeLayerA, LandscapeChunkA> {
     public override int lodLevel => 0;
-    public override int chunkW => (int)RegionSize.SIZE_1024/8;
-    public override int chunkH => (int)RegionSize.SIZE_1024/8;
+    public override int chunkW => (int)Terrain3DStorage.RegionSizeEnum.Size1024/8;
+    public override int chunkH => (int)Terrain3DStorage.RegionSizeEnum.Size1024/8;
 }
 
 public class LandscapeLayerB : LandscapeLayer<LandscapeLayerB, LandscapeChunkB> {
     public override int lodLevel => 1;
-    public override int chunkW => (int)RegionSize.SIZE_1024/4;
-    public override int chunkH => (int)RegionSize.SIZE_1024/4;
+    public override int chunkW => (int)Terrain3DStorage.RegionSizeEnum.Size1024/4;
+    public override int chunkH => (int)Terrain3DStorage.RegionSizeEnum.Size1024/4;
 }
 
 public class LandscapeLayerC : LandscapeLayer<LandscapeLayerC, LandscapeChunkC> {
     public override int lodLevel => 2;
-    public override int chunkW => (int)RegionSize.SIZE_1024/4;
-    public override int chunkH => (int)RegionSize.SIZE_1024/4;
+    public override int chunkW => (int)Terrain3DStorage.RegionSizeEnum.Size1024/2;
+    public override int chunkH => (int)Terrain3DStorage.RegionSizeEnum.Size1024/2;
 }
 
 public class LandscapeLayerD : LandscapeLayer<LandscapeLayerD, LandscapeChunkD> {
     public override int lodLevel => 3;
-    public override int chunkW => (int)RegionSize.SIZE_1024;
-    public override int chunkH => (int)RegionSize.SIZE_1024;
+    public override int chunkW => (int)Terrain3DStorage.RegionSizeEnum.Size1024;
+    public override int chunkH => (int)Terrain3DStorage.RegionSizeEnum.Size1024;
 }
 
 public class LandscapeChunkA : LandscapeChunk<LandscapeLayerA, LandscapeChunkA> { }

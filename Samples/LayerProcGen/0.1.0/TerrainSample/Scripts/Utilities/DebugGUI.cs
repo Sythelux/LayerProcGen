@@ -5,7 +5,8 @@ public partial class DebugGUI : Node
 {
     private Vector2I oldSize;
     private Vector2I oldPos;
-    private Window.ModeEnum oldMode;
+    private Window.ModeEnum oldMode = Window.ModeEnum.Windowed;
+    private Window.ModeEnum oldF11Mode;
     public static bool on { get; private set; } = true;
 
     [Export]
@@ -35,6 +36,15 @@ public partial class DebugGUI : Node
 
                 RenderingServer.FramePostDraw += Screenshot;
                 break;
+            case Key.F11:
+                if (GetWindow().Mode == Window.ModeEnum.ExclusiveFullscreen)
+                    GetWindow().Mode = oldF11Mode;
+                else
+                {
+                    oldF11Mode = GetWindow().Mode;
+                    GetWindow().Mode = Window.ModeEnum.ExclusiveFullscreen;
+                }
+                break;
         }
     }
 
@@ -44,7 +54,7 @@ public partial class DebugGUI : Node
         var screenshotName = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + "_Screenshot.png";
         GetViewport().GetTexture().GetImage().SavePng($"user://{screenshotName}");
         GD.Print($"Screenshot saved under: {Path.Join(OS.GetUserDataDir(), screenshotName)}");
-        
+
         if (GetWindow().Size == oldSize) return;
         GetWindow().Size = oldSize;
         GetWindow().Position = oldPos;

@@ -23,16 +23,19 @@ public struct SpecPointB
         get => props.X;
         set => props.X = value;
     }
+
     public float outerWidth
     {
         get => props.Y;
         set => props.Y = value;
     }
+
     public float controlWidth
     {
         get => props.Z;
         set => props.Z = value;
     }
+
     public float centerElevation
     {
         get => props.W;
@@ -42,7 +45,6 @@ public struct SpecPointB
 
 public static class TerrainDeformation
 {
-
     static ListPool<SpecPointB> specPointListPool = new ListPool<SpecPointB>(4096);
     static ListPool<SpecData> specDataListPool = new ListPool<SpecData>(128);
 
@@ -78,14 +80,14 @@ public static class TerrainDeformation
 
         List<SpecPointB> specPoints = specPointListPool.Get();
         specPoints.AddRange(specs.SelectMany(spec => spec.points));
-        // for (int i = 0; i < specs.Count; i++)
-        // {
-        //     DeformationSpec spec = specs[i];
-        //     for (int j = 0; j < spec.points.Count; j++)
-        //     {
-        //         specPoints.Add(spec.points[j]);
-        //     }
-        // }
+        for (int i = 0; i < specs.Count; i++)
+        {
+            DeformationSpec spec = specs[i];
+            for (int j = 0; j < spec.points.Count; j++)
+            {
+                specPoints.Add(spec.points[j]);
+            }
+        }
 
         if (postprocess != null)
         {
@@ -104,14 +106,14 @@ public static class TerrainDeformation
         }
 
         // SpecPointB[] specPointsArray = specPoints.Cast<SpecPointB>().ToArray();
-        // SpecPointB[] specPointsArray = new SpecPointB[specPoints.Count];
-        // SpecData[] specDatasArray = new SpecData[specDatas.Count];
+        SpecPointB[] specPointsArray = new SpecPointB[specPoints.Count];
+        SpecData[] specDatasArray = new SpecData[specDatas.Count];
 
         // UnityEngine.Profiling.Profiler.BeginSample("SetupSpecData");
-        // for (int i = 0; i < specPoints.Count; i++)
-            // specPointsArray[i] = (SpecPointB)specPoints[i];
-        // for (int i = 0; i < specDatas.Count; i++)
-        //     specDatasArray[i] = specDatas[i];
+        for (int i = 0; i < specPoints.Count; i++)
+            specPointsArray[i] = (SpecPointB)specPoints[i];
+        for (int i = 0; i < specDatas.Count; i++)
+            specDatasArray[i] = specDatas[i];
         // UnityEngine.Profiling.Profiler.EndSample();
 
         // UnityEngine.Profiling.Profiler.BeginSample("Dispatch");

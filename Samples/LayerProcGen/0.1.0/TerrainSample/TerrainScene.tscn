@@ -1,0 +1,231 @@
+[gd_scene load_steps=35 format=3 uid="uid://qv1c7fjct2si"]
+
+[ext_resource type="Material" uid="uid://cj3ecsbw07cej" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/Materials/Skybox.material" id="1_yc45g"]
+[ext_resource type="PackedScene" uid="uid://83643r4d4fkm" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/FirstPersonController.prefab.scn" id="2_06mc6"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/LayerProcGen/GenerationSource.cs" id="3_3y0sb"]
+[ext_resource type="Script" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/Scripts/Utilities/DebugGUI.cs" id="4_nsrr4"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/Editor/DebugOptionsWindow.cs" id="5_yd4aw"]
+[ext_resource type="Texture2D" uid="uid://ck7ppgu0wccf3" path="res://addons/LayerProcGen/Resources/icomoon-free--checkmark.svg" id="6_1gh7t"]
+[ext_resource type="Texture2D" uid="uid://kfnrkpxrigw5" path="res://addons/LayerProcGen/Resources/icomoon-free--radio-checked.svg" id="7_41wqy"]
+[ext_resource type="Texture2D" uid="uid://bhnq1ywg5lgvu" path="res://addons/LayerProcGen/Resources/icomoon-free--radio-unchecked.svg" id="8_4il6q"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/LayerProcGen/LayerManagerBehavior.cs" id="9_lay1d"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/LayerProcGen/VisualizationManager.cs" id="10_dqyvw"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/LayerProcGen/LayerSpec.cs" id="11_l327e"]
+[ext_resource type="Script" path="res://addons/LayerProcGen/Godot/Common/DebugDrawer.cs" id="12_vqjqr"]
+[ext_resource type="Shader" path="res://addons/LayerProcGen/Godot/Common/GLlineZOn.gdshader" id="13_bfxoe"]
+[ext_resource type="Shader" path="res://addons/LayerProcGen/Godot/Common/GLlineZOff.gdshader" id="14_7qa1c"]
+[ext_resource type="Script" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/Scripts/Generation/TerrainLODManager.cs" id="15_ukfjd"]
+[ext_resource type="Terrain3DStorage" uid="uid://dd68r34mq6xkh" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/Data/Resources/TerrainStorage.res" id="16_1ew1r"]
+[ext_resource type="Terrain3DAssets" uid="uid://bi6gc5rvi22d" path="res://Samples/LayerProcGen/0.1.0/TerrainSample/Data/Resources/Terrain3DAssets.res" id="17_p2tqv"]
+[ext_resource type="Script" path="res://addons/terrain_3d_csharp/GDExtensionWrappers/Terrain3D.cs" id="18_gwrnr"]
+
+[sub_resource type="Sky" id="Sky_3xfs6"]
+sky_material = ExtResource("1_yc45g")
+
+[sub_resource type="Environment" id="Environment_x8vow"]
+background_mode = 2
+sky = SubResource("Sky_3xfs6")
+ambient_light_color = Color(0.04, 0.109333, 0.2, 1)
+ambient_light_sky_contribution = 0.0
+fog_enabled = true
+fog_light_color = Color(0.32, 0.529323, 0.8, 1)
+fog_density = 0.001
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_lxt76"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_kic3d"]
+
+[sub_resource type="Resource" id="Resource_qqjkv"]
+script = ExtResource("11_l327e")
+layerClassName = &"PlayLayer"
+color = Color(1, 0, 0, 1)
+
+[sub_resource type="Resource" id="Resource_ti2aj"]
+script = ExtResource("11_l327e")
+layerClassName = &"LandscapeLayerA"
+color = Color(0.28, 1, 0.28, 1)
+
+[sub_resource type="Resource" id="Resource_uf8sd"]
+script = ExtResource("11_l327e")
+layerClassName = &"LandscapeLayerB"
+color = Color(0, 1, 0, 1)
+
+[sub_resource type="Resource" id="Resource_opgog"]
+script = ExtResource("11_l327e")
+layerClassName = &"LandscapeLayerC"
+color = Color(0, 0.75, 0, 1)
+
+[sub_resource type="Resource" id="Resource_gqb16"]
+script = ExtResource("11_l327e")
+layerClassName = &"LandscapeLayerD"
+color = Color(0, 0.56, 0, 1)
+
+[sub_resource type="Resource" id="Resource_mwtfo"]
+script = ExtResource("11_l327e")
+layerClassName = &"CultivationLayer"
+color = Color(0.901961, 0.576471, 0.0901961, 1)
+
+[sub_resource type="Resource" id="Resource_1nff6"]
+script = ExtResource("11_l327e")
+layerClassName = &"GeoGridLayer"
+color = Color(0.698039, 0.698039, 0.698039, 1)
+
+[sub_resource type="Resource" id="Resource_ig0ho"]
+script = ExtResource("11_l327e")
+layerClassName = &"LocationLayer"
+color = Color(0, 0.698039, 0.698039, 1)
+
+[sub_resource type="Gradient" id="Gradient_3sego"]
+offsets = PackedFloat32Array(0.2, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_xmnj5"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_aolic"]
+seamless = true
+color_ramp = SubResource("Gradient_3sego")
+noise = SubResource("FastNoiseLite_xmnj5")
+
+[sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_8sa57"]
+_shader_parameters = {
+"_mouse_layer": 2147483648,
+"auto_base_texture": 0,
+"auto_height_reduction": 0.1,
+"auto_overlay_texture": 1,
+"auto_slope": 1.0,
+"blend_sharpness": 0.87,
+"dual_scale_far": 170.0,
+"dual_scale_near": 100.0,
+"dual_scale_reduction": 0.3,
+"dual_scale_texture": 0,
+"height_blending": true,
+"macro_variation1": Color(1, 1, 1, 1),
+"macro_variation2": Color(0.898039, 0.898039, 0.803922, 1),
+"noise1_angle": 0.1,
+"noise1_offset": Vector2(0.5, 0.5),
+"noise1_scale": 0.04,
+"noise2_scale": 0.076,
+"noise3_scale": 0.225,
+"noise_texture": SubResource("NoiseTexture2D_aolic"),
+"tri_scale_reduction": 0.3,
+"vertex_normals_distance": 128.0
+}
+world_background = 0
+auto_shader = true
+dual_scaling = true
+
+[node name="RootNode3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_x8vow")
+
+[node name="Player" parent="." instance=ExtResource("2_06mc6")]
+transform = Transform3D(0.615662, 0, 0.788011, 0, 1, 0, -0.788011, 0, 0.615662, 257, 239, 245)
+motion_mode = 1
+script = ExtResource("3_3y0sb")
+Layer = "PlayLayer"
+Size = Vector2(1, 1)
+
+[node name="Camera" parent="Player/CameraPivot" index="0"]
+transform = Transform3D(0.998135, -0.0300617, 0.0531339, 0, 0.870356, 0.492424, -0.0610485, -0.491505, 0.868732, -78, 133, 711)
+attributes = SubResource("CameraAttributesPractical_lxt76")
+
+[node name="CSGMesh3D" type="CSGMesh3D" parent="Player/CollisionShape3D" index="0"]
+mesh = SubResource("CapsuleMesh_kic3d")
+
+[node name="Controller" type="Node3D" parent="."]
+
+[node name="DebugGUI" type="Node" parent="Controller" node_paths=PackedStringArray("DebugOverlay")]
+script = ExtResource("4_nsrr4")
+DebugOverlay = NodePath("../DebugOverlay")
+
+[node name="DebugOverlay" type="Control" parent="Controller"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DebugOptions" type="ScrollContainer" parent="Controller/DebugOverlay"]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 8.0
+grow_vertical = 2
+horizontal_scroll_mode = 0
+script = ExtResource("5_yd4aw")
+ButtonTexture = ExtResource("6_1gh7t")
+ToggleOn = ExtResource("7_41wqy")
+ToggleOff = ExtResource("8_4il6q")
+
+[node name="Tree" type="Tree" parent="Controller/DebugOverlay/DebugOptions"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="QueueText" type="Label" parent="Controller/DebugOverlay"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_right = -576.0
+offset_bottom = 23.0
+grow_horizontal = 2
+
+[node name="StatusText" type="Label" parent="Controller/DebugOverlay"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -621.0
+offset_bottom = 649.0
+grow_horizontal = 0
+
+[node name="LayerManagerBehavior" type="Node" parent="Controller" node_paths=PackedStringArray("debugQueueText", "debugStatusText")]
+script = ExtResource("9_lay1d")
+generationPlane = 1
+debugQueueText = NodePath("../DebugOverlay/QueueText")
+debugStatusText = NodePath("../DebugOverlay/StatusText")
+
+[node name="VisualizationManager" type="Node" parent="Controller"]
+script = ExtResource("10_dqyvw")
+layers = [SubResource("Resource_qqjkv"), SubResource("Resource_ti2aj"), SubResource("Resource_uf8sd"), SubResource("Resource_opgog"), SubResource("Resource_gqb16"), SubResource("Resource_mwtfo"), SubResource("Resource_1nff6"), SubResource("Resource_ig0ho")]
+worldOffset = 500.0
+
+[node name="DebugDrawer" type="Node" parent="Controller"]
+script = ExtResource("12_vqjqr")
+shaderZOn = ExtResource("13_bfxoe")
+shaderZOff = ExtResource("14_7qa1c")
+
+[node name="TerrainLODManager" type="Node" parent="Controller" node_paths=PackedStringArray("terrain")]
+script = ExtResource("15_ukfjd")
+terrain = NodePath("Terrain3D")
+
+[node name="Terrain3D" type="Terrain3D" parent="Controller/TerrainLODManager"]
+storage = ExtResource("16_1ew1r")
+material = SubResource("Terrain3DMaterial_8sa57")
+assets = ExtResource("17_p2tqv")
+script = ExtResource("18_gwrnr")
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0.663414, -0.55667, -3.71674e-08, 0.642787, 0.766045, 0.866025, -0.383022, 0.321394, 0, 0, 0)
+light_color = Color(1, 0.956863, 0.839216, 1)
+light_energy = 1.8
+light_bake_mode = 0
+shadow_enabled = true
+shadow_bias = 0.05
+shadow_normal_bias = 0.4
+
+[node name="WindZone" type="Node3D" parent="."]
+
+[node name="WindZone" type="Node" parent="WindZone"]
+
+[node name="CSGTorus3D" type="CSGTorus3D" parent="."]
+
+[node name="CSGTorus3D2" type="CSGTorus3D" parent="."]
+transform = Transform3D(100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0)
+outer_radius = 0.314
+sides = 19
+ring_sides = 18
+
+[editable path="Player"]
