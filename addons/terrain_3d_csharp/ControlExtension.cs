@@ -1,6 +1,6 @@
 using System;
 
-namespace Terrain3D.Scripts.Utilities;
+namespace Terrain3DExtensions;
 
 public static class ControlExtension
 {
