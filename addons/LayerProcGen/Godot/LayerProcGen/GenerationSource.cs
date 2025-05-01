@@ -23,64 +23,64 @@ namespace Runevision.LayerProcGen;
 
 public partial class GenerationSource : Node3D
 {
-    public LayerNamedReference layer = new LayerNamedReference();
-    public Point size = Point.zero;
+	public LayerNamedReference layer = new LayerNamedReference();
+	public Point size = Point.zero;
 
-    public TopLayerDependency dep { get; private set; }
+	public TopLayerDependency dep { get; private set; }
 
-    public override void _EnterTree()
-    {
-        if(!Engine.IsEditorHint())
-            UpdateState();
-    }
+	public override void _EnterTree()
+	{
+		if(!Engine.IsEditorHint())
+			UpdateState();
+	}
 
-    public override void _ExitTree()
-    {
-        if (Engine.IsEditorHint()) return;
-        if (dep != null)
-            dep.isActive = false;
-    }
+	public override void _ExitTree()
+	{
+		if (Engine.IsEditorHint()) return;
+		if (dep != null)
+			dep.isActive = false;
+	}
 
-    void UpdateState()
-    {
-        if (layer == null)
-            return;
+	void UpdateState()
+	{
+		if (layer == null)
+			return;
 
-        // Get layer instance.
-        AbstractChunkBasedDataLayer instance = layer.GetLayerInstance();
+		// Get layer instance.
+		AbstractChunkBasedDataLayer instance = layer.GetLayerInstance();
 
-        // Create top layer dependency based on layer.
-        if (instance != null && (dep == null || dep.layer != instance))
-        {
-            if (dep != null)
-                dep.isActive = false;
-            dep = new TopLayerDependency(instance, size);
-        }
-    }
+		// Create top layer dependency based on layer.
+		if (instance != null && (dep == null || dep.layer != instance))
+		{
+			if (dep != null)
+				dep.isActive = false;
+			dep = new TopLayerDependency(instance, size);
+		}
+	}
 
-    public override void _Process(double delta)
-    {
-        if(Engine.IsEditorHint()) return;
-        base._Process(delta);
-        UpdateState();
-        if (dep == null)
-            return;
+	public override void _Process(double delta)
+	{
+		if(Engine.IsEditorHint()) return;
+		base._Process(delta);
+		UpdateState();
+		if (dep == null)
+			return;
 
-        foreach (IGodotInstance layer in AbstractDataLayer.layers.OfType<IGodotInstance>())
-        {
-            // Node? layerRoot = layer.LayerRoot(); //temporarily disabled for debugging
-            // if(layerRoot != null && layerRoot.GetParent() == null)
-            //     CallDeferred("add_child", layerRoot); //TODO: would be cool to do this after build end
-        }
-        
-        Vector3 focusPos = Position;
-        Point focus;
-        if (LayerManagerBehavior.instance?.generationPlane == LayerManagerBehavior.GenerationPlane.XZ)
-            focus = (Point)(focusPos.xz());
-        else
-            focus = (Point)(focusPos.xy());
-        dep.SetFocus(focus);
-        dep.SetSize(Point.Max(Point.one, size));
-    }
+		foreach (IGodotInstance layer in AbstractDataLayer.layers.OfType<IGodotInstance>())
+		{
+			// Node? layerRoot = layer.LayerRoot(); //temporarily disabled for debugging
+			// if(layerRoot != null && layerRoot.GetParent() == null)
+			//     CallDeferred("add_child", layerRoot); //TODO: would be cool to do this after build end
+		}
+		
+		Vector3 focusPos = Position;
+		Point focus;
+		if (LayerManagerBehavior.instance?.generationPlane == LayerManagerBehavior.GenerationPlane.XZ)
+			focus = (Point)(focusPos.xz());
+		else
+			focus = (Point)(focusPos.xy());
+		dep.SetFocus(focus);
+		dep.SetSize(Point.Max(Point.one, size));
+	}
 }
 #endif

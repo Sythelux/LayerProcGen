@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://bhvrrmb8bk1bt"]
 
-[ext_resource type="Script" path="res://addons/terrain_3d/editor/components/bake_lod_dialog.gd" id="1_57670"]
+[ext_resource type="Script" uid="uid://ciwqgp554mj83" path="res://addons/terrain_3d/editor/components/bake_lod_dialog.gd" id="1_57670"]
 
 [node name="bake_lod_dialog" type="ConfirmationDialog"]
 title = "Bake Terrain3D Mesh"

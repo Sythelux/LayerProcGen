@@ -7,6 +7,7 @@
  */
 
 using System;
+using Godot;
 
 namespace Runevision.Common {
 
@@ -146,6 +147,12 @@ namespace Runevision.Common {
 		}
 
 		public float magnitude { get { return (float)Math.Sqrt(sqrMagnitude); } }
+
+
+		public Vector3 ToVector3(float y = 0f)
+		{
+			return new Vector3(x, y, y);
+		}
 
 		public static float Distance(DPoint a, DPoint b) {
 			return (b - a).magnitude;
