@@ -1,3 +1,5 @@
+# Copyright © 2025 Cory Petkovsek, Roope Palmroos, and Contributors.
+# Editor Region Gizmos for Terrain3D
 extends EditorNode3DGizmo
 	
 var material: StandardMaterial3D
@@ -32,7 +34,7 @@ func _redraw() -> void:
 
 	if show_rect:
 		var modulate: Color = main_color if !use_secondary_color else secondary_color
-		if abs(region_position.x) > 8 or abs(region_position.y) > 8:
+		if abs(region_position.x) > Terrain3DData.REGION_MAP_SIZE*.5 or abs(region_position.y) > Terrain3DData.REGION_MAP_SIZE*.5:
 			modulate = Color.GRAY
 		draw_rect(Vector2(region_size,region_size)*.5 + rect_position, region_size, selection_material, modulate)
 	
@@ -44,7 +46,7 @@ func _redraw() -> void:
 			
 		draw_rect(Vector2(region_size,region_size)*.5 + grid_tile_position, region_size, material, grid_color)
 		
-	draw_rect(Vector2.ZERO, region_size * 16.0, material, border_color)
+	draw_rect(Vector2.ZERO, region_size * Terrain3DData.REGION_MAP_SIZE, material, border_color)
 
 
 func draw_rect(p_pos: Vector2, p_size: float, p_material: StandardMaterial3D, p_modulate: Color) -> void:

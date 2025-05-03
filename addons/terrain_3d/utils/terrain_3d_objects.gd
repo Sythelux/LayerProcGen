@@ -1,3 +1,6 @@
+# Copyright © 2025 Cory Petkovsek, Roope Palmroos, and Contributors.
+# Objects parent for Terrain3D
+# Children nodes get transform updates on sculpting
 @tool
 extends Node3D
 class_name Terrain3DObjects
@@ -42,22 +45,22 @@ func editor_setup(p_plugin) -> void:
 func get_terrain() -> Terrain3D:
 	var terrain := instance_from_id(_terrain_id) as Terrain3D
 	if not terrain or terrain.is_queued_for_deletion() or not terrain.is_inside_tree():
-		var terrains: Array[Node] = EditorInterface.get_edited_scene_root().find_children("", "Terrain3D")
+		var terrains: Array[Node] = Engine.get_singleton(&"EditorInterface").get_edited_scene_root().find_children("", "Terrain3D")
 		if terrains.size() > 0:
 			terrain = terrains[0]
 		_terrain_id = terrain.get_instance_id() if terrain else 0
 	
-	if terrain and terrain.storage and not terrain.storage.maps_edited.is_connected(_on_maps_edited):
-		terrain.storage.maps_edited.connect(_on_maps_edited)
+	if terrain and terrain.data and not terrain.data.maps_edited.is_connected(_on_maps_edited):
+		terrain.data.maps_edited.connect(_on_maps_edited)
 	
 	return terrain
 
 
 func _get_terrain_height(p_global_position: Vector3) -> float:
 	var terrain: Terrain3D = get_terrain()
-	if not terrain or not terrain.storage:
+	if not terrain or not terrain.data:
 		return 0.0
-	var height: float = terrain.storage.get_height(p_global_position)
+	var height: float = terrain.data.get_height(p_global_position)
 	if is_nan(height):
 		return 0.0
 	return height
@@ -97,7 +100,8 @@ func _on_child_exiting_tree(p_node: Node) -> void:
 	
 	var helper: TransformChangedNotifier = p_node.get_node_or_null(CHILD_HELPER_PATH)
 	if helper:
-		helper.transform_changed.disconnect(_on_child_transform_changed)
+		if helper.transform_changed.is_connected(_on_child_transform_changed):
+			helper.transform_changed.disconnect(_on_child_transform_changed)
 		p_node.remove_child(helper)
 		helper.queue_free()
 	
@@ -105,7 +109,7 @@ func _on_child_exiting_tree(p_node: Node) -> void:
 
 
 func _is_node_selected(p_node: Node) -> bool:
-	var editor_sel = EditorInterface.get_selection()
+	var editor_sel = Engine.get_singleton(&"EditorInterface").get_selection()
 	return editor_sel.get_transformable_selected_nodes().has(p_node)
 
 
