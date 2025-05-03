@@ -1,11 +1,11 @@
 [gd_scene load_steps=8 format=3 uid="uid://cofnhdcclon1w"]
 
-[ext_resource type="Script" path="res://Samples/Terrain3D/src/CodeGenerated.gd" id="1_h7vyv"]
+[ext_resource type="Script" uid="uid://bn2buwnu1kb0f" path="res://Samples/Terrain3D/src/CodeGenerated.gd" id="1_h7vyv"]
 [ext_resource type="PackedScene" uid="uid://domhm87hbhbg1" path="res://Samples/Terrain3D/components/Player.tscn" id="2_3v2uf"]
 [ext_resource type="PackedScene" uid="uid://bb2lp50sjndus" path="res://Samples/Terrain3D/components/World.tscn" id="3_71ikj"]
 [ext_resource type="PackedScene" uid="uid://di5fovhcyd7re" path="res://Samples/Terrain3D/components/Enemy.tscn" id="4_p8qry"]
 [ext_resource type="PackedScene" uid="uid://d2jihfohphuue" path="res://Samples/Terrain3D/components/UI.tscn" id="4_x5ge4"]
-[ext_resource type="Script" path="res://Samples/Terrain3D/src/RuntimeNavigationBaker.gd" id="5_445ur"]
+[ext_resource type="Script" uid="uid://buxmpcp6ffu0g" path="res://Samples/Terrain3D/src/RuntimeNavigationBaker.gd" id="5_445ur"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_vs6am"]
 geometry_parsed_geometry_type = 1

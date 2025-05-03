@@ -45,3 +45,4 @@ ExportedObj/
 *.mdb
 *.opendb
 *.VC.db
+*.csproj.old

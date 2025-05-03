@@ -1,0 +1,25 @@
+<Project Sdk="Godot.NET.Sdk/4.3.0-beta.3">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net7.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'ios' ">net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullables</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="addons\LayerProcGen\Resources\LayerProcGenLogoSmall.png" />
+    <Content Include="addons\LayerProcGen\Resources\material-symbols-light--toggle-off-outline.svg" />
+    <Content Include="addons\LayerProcGen\Resources\material-symbols-light--toggle-on-outline.svg" />
+    <Content Include="Samples\LayerProcGen\0.1.0\TerrainSample\Scripts\Behaviors\FreeLookCamera.gd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="addons\terrain_3d\gen\**" />
+    <Compile Remove="addons\terrain_3d\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="addons\terrain_3d\gen\**" />
+    <EmbeddedResource Remove="addons\terrain_3d\**" />
+  </ItemGroup>
+</Project>

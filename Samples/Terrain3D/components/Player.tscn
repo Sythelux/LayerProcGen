@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://domhm87hbhbg1"]
 
-[ext_resource type="Script" path="res://Samples/Terrain3D/src/Player.gd" id="1_nm1yx"]
-[ext_resource type="Script" path="res://Samples/Terrain3D/src/CameraManager.gd" id="2_loos7"]
+[ext_resource type="Script" uid="uid://dnoi6uv4tcdvr" path="res://Samples/Terrain3D/src/Player.gd" id="1_nm1yx"]
+[ext_resource type="Script" uid="uid://chjx6lwt13s6k" path="res://Samples/Terrain3D/src/CameraManager.gd" id="2_loos7"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_smq6u"]
 
